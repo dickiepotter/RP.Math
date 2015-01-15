@@ -1,0 +1,262 @@
+﻿<Window x:Class="CGMathSample.VectorViewer"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:Tools="clr-namespace:_3DTools;assembly=3DTools"
+    Title="VectorViewer" Height="700" Width="1021">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition />
+            <ColumnDefinition Width="200"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0">
+
+            <StackPanel.Background>
+                <LinearGradientBrush>
+                    <GradientStop Color="White" Offset="0"/>
+                    <GradientStop Color="DarkKhaki" Offset=".3"/>
+                    <GradientStop Color="DarkKhaki" Offset=".7"/>
+                    <GradientStop Color="White" Offset="1"/>
+                </LinearGradientBrush>
+            </StackPanel.Background>
+
+            <StackPanel Margin="10">
+                <Label HorizontalAlignment="Center">Position</Label>
+                <Label Name="position" HorizontalAlignment="Center">(0,0,0)</Label>
+                <Label HorizontalAlignment="Center">Rotated Position</Label>
+                <Label Name="rotPosition" HorizontalAlignment="Center">(0,0,0)</Label>
+            </StackPanel>
+
+            <WrapPanel Margin="10">
+                <Label>X</Label>
+                <Slider Name="X" Width="160" Maximum="60" Minimum="-60" ValueChanged="X_ValueChanged" />
+            </WrapPanel>
+
+            <WrapPanel Margin="10">
+                <Label>Y</Label>
+                <Slider Name="Y" Width="160" Maximum="60" Minimum="-60" ValueChanged="Y_ValueChanged" />
+            </WrapPanel>
+
+            <WrapPanel Margin="10">
+                <Label>Z</Label>
+                <Slider Name="Z" Width="160" Maximum="60" Minimum="-60" ValueChanged="Z_ValueChanged"/>
+            </WrapPanel>
+
+            <StackPanel Margin="10">
+                <Label HorizontalContentAlignment="Center">X Axis Mapping</Label>
+                <ComboBox Name="xAxis" Background="Khaki" SelectionChanged="Draw" />
+            </StackPanel>
+
+            <StackPanel Margin="10">
+                <Label HorizontalContentAlignment="Center">Y Axis Mapping</Label>
+                <ComboBox Name="yAxis" Background="Khaki" SelectionChanged="Draw" />
+            </StackPanel>
+
+            <StackPanel Margin="10">
+                <Label HorizontalContentAlignment="Center">Z Axis Mapping</Label>
+                <ComboBox Name="zAxis" Background="Khaki" SelectionChanged="Draw" />
+            </StackPanel>
+
+            <WrapPanel Margin="10">
+                <Label Width="40">Yaw</Label>
+                <Slider Name="Yaw" Width="140" Maximum="360" Minimum="0" ValueChanged="Draw" />
+                <TextBox Name="YawTB" Width="180" Background="Khaki" TextChanged="YawTB_TextChanged"/>
+            </WrapPanel>
+
+            <WrapPanel Margin="10">
+                <Label Width="40">Pitch</Label>
+                <Slider Name="Pitch" Width="140" Maximum="360" Minimum="0" ValueChanged="Draw" />
+                <TextBox Name="PitchTB" Width="180" Background="Khaki" TextChanged="PitchTB_TextChanged"/>
+            </WrapPanel>
+
+            <WrapPanel Margin="10">
+                <Label Width="40">Roll</Label>
+                <Slider Name="Roll" Width="140" Maximum="360" Minimum="0" ValueChanged="Draw"/>
+                <TextBox Name="RollTB" Width="180" Background="Khaki" TextChanged="RollTB_TextChanged"/>
+            </WrapPanel>
+
+        </StackPanel>
+
+        <Viewport3D Grid.Column="1" Name="viewport" ClipToBounds="True" RenderOptions.EdgeMode="Aliased">
+            <Viewport3D.Camera>
+                <PerspectiveCamera LookDirection="0 0 -1" FarPlaneDistance="1000" NearPlaneDistance="1" Position="0 0 250"/>
+            </Viewport3D.Camera>
+
+            <Tools:ScreenSpaceLines3D Points="-100 0 0 100 0 0" Thickness="1" Color="Black"/>
+            <Tools:ScreenSpaceLines3D Points="0 -100 0 0 100 0" Thickness="1" Color="Black"/>
+            <Tools:ScreenSpaceLines3D Points="0 0 -100 0 0 100" Thickness="1" Color="Black"/>
+
+            <ModelVisual3D>
+                <ModelVisual3D.Content>
+                    <GeometryModel3D>
+                        <GeometryModel3D.Geometry>
+                            <MeshGeometry3D Positions="-2.5 105 0 2.5 105 0 2.5 110 0 -2.5 110 0" TriangleIndices="0 1 2 0 2 3" TextureCoordinates="0 1 1 1 1 0 0 0"/>
+                        </GeometryModel3D.Geometry>
+                        <GeometryModel3D.BackMaterial>
+                            <DiffuseMaterial>
+                                <DiffuseMaterial.Brush>
+                                    <VisualBrush>
+                                        <VisualBrush.Visual >
+                                            <TextBlock>y</TextBlock>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </DiffuseMaterial.Brush>
+                            </DiffuseMaterial>
+                        </GeometryModel3D.BackMaterial>
+                        <GeometryModel3D.Material>
+                            <DiffuseMaterial>
+                                <DiffuseMaterial.Brush>
+                                    <VisualBrush>
+                                        <VisualBrush.Visual >
+                                            <TextBlock>y</TextBlock>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </DiffuseMaterial.Brush>
+                            </DiffuseMaterial>
+                        </GeometryModel3D.Material>
+                    </GeometryModel3D>
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
+
+            <ModelVisual3D>
+                <ModelVisual3D.Content>
+                    <GeometryModel3D>
+                        <GeometryModel3D.Geometry>
+                            <MeshGeometry3D Positions="-5 -105 0 5 -105 0 5 -110 0 -5 -110 0" TriangleIndices="0 1 2 0 2 3" TextureCoordinates="0 1 1 1 1 0 0 0"/>
+                        </GeometryModel3D.Geometry>
+                        <GeometryModel3D.Material>
+                            <DiffuseMaterial>
+                                <DiffuseMaterial.Brush>
+                                    <VisualBrush>
+                                        <VisualBrush.Visual>
+                                            <TextBlock>-y</TextBlock>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </DiffuseMaterial.Brush>
+                            </DiffuseMaterial>
+                        </GeometryModel3D.Material>
+                        <GeometryModel3D.BackMaterial>
+                            <DiffuseMaterial>
+                                <DiffuseMaterial.Brush>
+                                    <VisualBrush>
+                                        <VisualBrush.Visual >
+                                            <TextBlock>-y</TextBlock>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </DiffuseMaterial.Brush>
+                            </DiffuseMaterial>
+                        </GeometryModel3D.BackMaterial>
+                    </GeometryModel3D>
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
+            
+            <ModelVisual3D>
+                <ModelVisual3D.Content>
+                    <GeometryModel3D>
+                        <GeometryModel3D.Geometry>
+                            <MeshGeometry3D Positions="105 -2.5 0 105 2.5 0 110 2.5 0 110 -2.5 0" TriangleIndices="0 1 2 0 2 3" TextureCoordinates="0 1 1 1 1 0 0 0"/>
+                        </GeometryModel3D.Geometry>
+                        <GeometryModel3D.BackMaterial>
+                            <DiffuseMaterial>
+                                <DiffuseMaterial.Brush>
+                                    <VisualBrush>
+                                        <VisualBrush.Visual >
+                                            <TextBlock>x</TextBlock>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </DiffuseMaterial.Brush>
+                            </DiffuseMaterial>
+                        </GeometryModel3D.BackMaterial>
+                        <GeometryModel3D.Material>
+                            <DiffuseMaterial>
+                                <DiffuseMaterial.Brush>
+                                    <VisualBrush>
+                                        <VisualBrush.Visual >
+                                            <TextBlock>x</TextBlock>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </DiffuseMaterial.Brush>
+                            </DiffuseMaterial>
+                        </GeometryModel3D.Material>
+                    </GeometryModel3D>
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
+
+            <ModelVisual3D>
+                <ModelVisual3D.Content>
+                    <GeometryModel3D>
+                        <GeometryModel3D.Geometry>
+                            <MeshGeometry3D Positions="-105 -5 0 -105 5 0 -110 5 0 -110 -5 0" TriangleIndices="0 1 2 0 2 3" TextureCoordinates="0 1 1 1 1 0 0 0"/>
+                        </GeometryModel3D.Geometry>
+                        <GeometryModel3D.Material>
+                            <DiffuseMaterial>
+                                <DiffuseMaterial.Brush>
+                                    <VisualBrush>
+                                        <VisualBrush.Visual>
+                                            <TextBlock>-x</TextBlock>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </DiffuseMaterial.Brush>
+                            </DiffuseMaterial>
+                        </GeometryModel3D.Material>
+                        <GeometryModel3D.BackMaterial>
+                            <DiffuseMaterial>
+                                <DiffuseMaterial.Brush>
+                                    <VisualBrush>
+                                        <VisualBrush.Visual >
+                                            <TextBlock>-x</TextBlock>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </DiffuseMaterial.Brush>
+                            </DiffuseMaterial>
+                        </GeometryModel3D.BackMaterial>
+                    </GeometryModel3D>
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
+
+
+        </Viewport3D>
+
+        <StackPanel Grid.Column="2">
+
+            <Label HorizontalContentAlignment="Center" Background="DarkKhaki">XZ Plane</Label>
+            <Viewport3D Height="200" Name="XZ" >
+                <Viewport3D.Camera>
+                    <OrthographicCamera LookDirection="0  -1 .000001" FarPlaneDistance="1000" NearPlaneDistance="1" Position="0 250 0"/>
+                </Viewport3D.Camera>
+
+
+                <Tools:ScreenSpaceLines3D Points="-100 0 0 100 0 0" Thickness="1" Color="Black"/>
+                <Tools:ScreenSpaceLines3D Points="0 -100 0 0 100 0" Thickness="1" Color="Black"/>
+                <Tools:ScreenSpaceLines3D Points="0 0 -100 0 0 100" Thickness="1" Color="Black"/>
+            </Viewport3D>
+
+            <Label HorizontalContentAlignment="Center" Background="DarkKhaki">XY Plane</Label>
+            <Viewport3D Height="200" Name="XY">
+                <Viewport3D.Camera>
+                    <OrthographicCamera LookDirection="0 0 -1" FarPlaneDistance="1000" NearPlaneDistance="1" Position="0 0 250"/>
+                </Viewport3D.Camera>
+
+                <Tools:ScreenSpaceLines3D Points="-100 0 0 100 0 0" Thickness="1" Color="Black"/>
+                <Tools:ScreenSpaceLines3D Points="0 -100 0 0 100 0" Thickness="1" Color="Black"/>
+                <Tools:ScreenSpaceLines3D Points="0 0 -100 0 0 100" Thickness="1" Color="Black"/>
+            </Viewport3D>
+
+            <Label HorizontalContentAlignment="Center" Background="DarkKhaki">YZ Plane</Label>
+            <Viewport3D Height="200" Name="YZ">
+                <Viewport3D.Camera>
+                    <OrthographicCamera LookDirection="-1 0 0" FarPlaneDistance="1000" NearPlaneDistance="1" Position="250 0 0"/>
+                </Viewport3D.Camera>
+
+                <Tools:ScreenSpaceLines3D Points="-100 0 0 100 0 0" Thickness="1" Color="Black"/>
+                <Tools:ScreenSpaceLines3D Points="0 -100 0 0 100 0" Thickness="1" Color="Black"/>
+                <Tools:ScreenSpaceLines3D Points="0 0 -100 0 0 100" Thickness="1" Color="Black"/>
+            </Viewport3D>
+        </StackPanel>
+
+        <Border Name="border" Grid.Column="1" Background="Transparent" />
+
+    </Grid>
+</Window>
