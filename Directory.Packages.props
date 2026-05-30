@@ -24,4 +24,10 @@
     <PackageVersion Include="Vortice.Mathematics" Version="2.1.1" />
   </ItemGroup>
 
+  <!-- Visualizer (Blazor WebAssembly) -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.27" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.27" />
+  </ItemGroup>
+
 </Project>
