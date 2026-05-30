@@ -122,11 +122,11 @@ public static class Operations
         Add("interpolate", "Interpolate(A, B, t)", "Geometry", "A(1 − t) + B·t",
             "Linear blend between A (t = 0) and B (t = 1). Values outside 0–1 extrapolate along the line.",
             c => OpResult.Vec(Vector3.Interpolate(c.A, c.B, c.Control, true)), Input.B, Input.Control);
-        Add("min", "Min(A, B)", "Geometry", "componentwise min",
-            "A vector taking the smaller of each component.",
+        Add("min", "Min(A, B)", "Geometry", "smaller of |A|, |B|",
+            "Returns whichever of A or B has the smaller magnitude (length) — not a component-wise minimum.",
             c => OpResult.Vec(c.A.Min(c.B)), Input.B);
-        Add("max", "Max(A, B)", "Geometry", "componentwise max",
-            "A vector taking the larger of each component.",
+        Add("max", "Max(A, B)", "Geometry", "greater of |A|, |B|",
+            "Returns whichever of A or B has the greater magnitude (length) — not a component-wise maximum.",
             c => OpResult.Vec(c.A.Max(c.B)), Input.B);
 
         // ---- Rotation (degrees in, applied as radians) ----
@@ -182,8 +182,8 @@ public static class Operations
         Add("isPerp", "Is perpendicular to B?", "Predicates", "A · B ≈ 0",
             "True when A and B meet at a right angle (within tolerance).",
             c => OpResult.Bool(c.A.IsPerpendicular(c.B, c.Tolerance)), Input.B, Input.Tolerance);
-        Add("isBackFace", "Is back face? (A normal, B sight)", "Predicates", "A · B > 0",
-            "Treating A as a surface normal and B as the line of sight, true when the face points away.",
+        Add("isBackFace", "Is back face? (A normal, B sight)", "Predicates", "A · B < 0",
+            "Treating A as a surface normal and B as the line of sight, true when they point against each other (dot < 0).",
             c => OpResult.Bool(c.A.IsBackFace(c.B)), Input.B);
 
         // ---- Comparison ----
