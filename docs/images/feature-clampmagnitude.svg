@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300" viewBox="0 0 500 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="272" viewBox="0 0 500 272" font-family="Segoe UI, Helvetica, Arial, sans-serif">
   <defs>
     <marker id="cm-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6feb"/></marker>
     <marker id="cm-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1a7f37"/></marker>
   </defs>
-  <rect x="0.5" y="0.5" width="499" height="299" rx="12" fill="#f6f8fa" stroke="#d0d7de"/>
-  <text x="20" y="30" font-size="16" font-weight="600" fill="#24292f">ClampMagnitude caps the length, keeps the direction</text>
+  <rect x="0.5" y="0.5" width="499" height="271" rx="12" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="20" y="30" font-size="16" font-weight="600" fill="#24292f">ClampMagnitude caps the length</text>
 
   <!-- max-radius circle -->
   <circle cx="120" cy="215" r="130" fill="none" stroke="#bf8700" stroke-width="2" stroke-dasharray="5 4"/>
@@ -21,5 +21,4 @@
   <line x1="120" y1="215" x2="226" y2="141" stroke="#1a7f37" stroke-width="3.5" marker-end="url(#cm-green)"/>
   <text x="80" y="120" font-size="14" fill="#1a7f37" font-weight="600">result (length = max)</text>
 
-  <text x="20" y="280" font-size="13" fill="#24292f"><tspan font-weight="600">ClampMagnitude(v, max)</tspan> caps |v| at max, keeping direction.</text>
 </svg>

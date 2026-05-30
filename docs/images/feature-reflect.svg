@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300" viewBox="0 0 500 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="272" viewBox="0 0 500 272" font-family="Segoe UI, Helvetica, Arial, sans-serif">
   <defs>
     <marker id="r-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6feb"/></marker>
     <marker id="r-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1a7f37"/></marker>
     <marker id="r-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#bf8700"/></marker>
   </defs>
-  <rect x="0.5" y="0.5" width="499" height="299" rx="12" fill="#f6f8fa" stroke="#d0d7de"/>
+  <rect x="0.5" y="0.5" width="499" height="271" rx="12" fill="#f6f8fa" stroke="#d0d7de"/>
   <text x="20" y="30" font-size="16" font-weight="600" fill="#24292f">Reflect a vector about a surface normal</text>
 
   <!-- surface -->
@@ -37,5 +37,4 @@
   <text x="212" y="160" font-size="12" fill="#57606a">&#952;</text>
   <text x="280" y="160" font-size="12" fill="#57606a">&#952;</text>
 
-  <text x="20" y="278" font-size="13" fill="#24292f"><tspan font-weight="600">r = v &#8722; 2 (v &#183; n&#770;) n&#770;</tspan>   (angle in = angle out)</text>
 </svg>

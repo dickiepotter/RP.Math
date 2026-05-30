@@ -83,7 +83,7 @@ public struct Vector
 What orientation are the axes in? Well, for the type we are building it
 doesn't matter but I always assume:
 
-<img src="docs/images/axisOrient.gif" width="305" height="244" />
+![](docs/images/axisOrient.gif)
 
 You may have noticed that Z is negative as you look down the axis. This
 is a common convention in graphics libraries such as OpenGL. Again,
@@ -348,8 +348,7 @@ is its length, irrespective of direction.
 
 **Magnitude**\
 The length (or magnitude) of a vector can be determined using the
-formula <img src="docs/images/image003.gif" data-border="0" width="130"
-height="20" />.
+formula ![](docs/images/image003.gif).
 
 ```csharp
 public static double Magnitude(Vector v1)
@@ -527,24 +526,21 @@ public static Vector operator*(double s1, Vector v2)
 The **cross product** of two vectors produces a normal to the plane
 created by the two vectors given.
 
-<img src="docs/images/image004.gif" width="220" height="232" />
+![](docs/images/image004.gif)
 
 The formulae for this (where v1 = A and v2 = B) is
 
-<img src="docs/images/image005.gif" width="339" height="112" />
+![](docs/images/image005.gif)
 
-<img src="docs/images/image006.gif" data-border="0" width="35"
-height="20" />
+![](docs/images/image006.gif)
 
-<img src="docs/images/image007.gif" data-border="0" width="320"
-height="20" />
+![](docs/images/image007.gif)
 
 The equation should always produce a vector as the result.
 
 The sine of theta is used to account for the direction of the vector.
 Theta always takes the smallest angle between A and B (i.e.
-<img src="docs/images/image008.gif" data-border="0" width="60"
-height="15" />).
+![](docs/images/image008.gif)).
 
 The right hand side of the formula is arrived at by expanding and
 simplifying the left hand side using the rules:
@@ -555,8 +551,7 @@ Sin 90° = 1
 
 In a matrix style notation this looks like:
 
-<img src="docs/images/image009.gif" data-border="0" width="180"
-height="95" />
+![](docs/images/image009.gif)
 
 You should be aware that this equation is non-commutable. This means
 that v1 cross-product v2 is NOT the same as v2 cross-product v1.
@@ -597,25 +592,22 @@ else, the origional vecotor needing to be left intact.
 \[Side note\] A quick template for manualy calculating the cross product
 of two vectors is:
 
-<img src="docs/images/image010.gif" width="172" height="160" />
+![](docs/images/image010.gif)
 
 The **dot product** of two vectors is a scalar value defined by the
 formulae;
 
-<img src="docs/images/image005.gif" width="339" height="112" />
+![](docs/images/image005.gif)
 
-<img src="docs/images/image011.gif" data-border="0" width="40"
-height="20" />
+![](docs/images/image011.gif)
 
-<img src="docs/images/image012.gif" data-border="0" width="250"
-height="20" />
+![](docs/images/image012.gif)
 
 The equation should always produce a scalar as the result.
 
 Cosine theta is used to account for the direction of the vector. Theta
 always takes the smallest angle between A and B (i.e.
-<img src="docs/images/image008.gif" data-border="0" width="80"
-height="15" />).
+![](docs/images/image008.gif)).
 
 The right hand side of the formula is arrived at by expanding and
 simplifying the left hand side using the rules:
@@ -706,8 +698,7 @@ public bool IsUnitVector()
 Normalization is the process of converting some vector to a unit vector.
 The formula for this is:
 
-<img src="docs/images/image013.gif" data-border="0" width="156"
-height="109" />
+![](docs/images/image013.gif)
 
 ```csharp
 public static Vector Normalize(Vector v1)
@@ -752,7 +743,7 @@ point (Vector v2), and a control which is a fraction between 1 and 0.
 The control determines which point between v1 and v2 is taken. A control
 of 0 will return v1 and a control of 1 will return v2.
 
-<img src="docs/images/image014.gif" width="314" height="230" />
+![](docs/images/image014.gif)
 
 $n = n_1(1 - t) + n_2 t$
 
@@ -766,8 +757,7 @@ $n = n_1 + t n_2 - t n_1$
 
 or:
 
-<img src="docs/images/image018.gif" data-border="0" width="160"
-height="35" />
+![](docs/images/image018.gif)
 
 where:
 
@@ -778,12 +768,9 @@ $n_1$ = Initial value (v1)
 $n_2$ = Final value (v2)
 
 $t$ = Control parameter, where
-<img src="docs/images/image023.gif" data-border="0" width="50"
-height="20" />, and where,
-<img src="docs/images/image024.gif" data-border="0" width="50"
-height="20" />,
-<img src="docs/images/image025.gif" data-border="0" width="50"
-height="20" />
+![](docs/images/image023.gif), and where,
+![](docs/images/image024.gif),
+![](docs/images/image025.gif)
 
 ```csharp
 public static Vector Interpolate(Vector v1, Vector v2, double control)
@@ -825,10 +812,9 @@ private const string INTERPOLATION_RANGE = "Control parameter must be a value be
 This method finds the distance between two positional vectors using
 Pythagoras theorem.
 
-<img src="docs/images/image026.gif" width="411" height="115" />
+![](docs/images/image026.gif)
 
-<img src="docs/images/image027.gif" data-border="0" width="400"
-height="20" />
+![](docs/images/image027.gif)
 
 ```csharp
 public static double Distance(Vector v1, Vector v2)
@@ -881,16 +867,13 @@ public Vector Abs()
 This method finds the angle between two vectors using normalization and
 dot product.
 
-<img src="docs/images/image028.gif" width="412" height="177" />
+![](docs/images/image028.gif)
 
-<img src="docs/images/image029.gif" data-border="0" width="200"
-height="20" />
+![](docs/images/image029.gif)
 
-<img src="docs/images/image030.gif" data-border="0" width="250"
-height="40" />
+![](docs/images/image030.gif)
 
-<img src="docs/images/image031.gif" data-border="0" width="200"
-height="20" />
+![](docs/images/image031.gif)
 
 ^ refers to a normalized (unit) vector.
 
@@ -948,42 +931,31 @@ public Vector Min(Vector other)
 This method rotates a vector around the Y axis by a given number of
 degrees (Euler rotation around Y).
 
-<img src="docs/images/image032.gif" width="412" height="177" />
+![](docs/images/image032.gif)
 
-<img src="docs/images/image033.gif" width="412" height="177" />
+![](docs/images/image033.gif)
 
-<img src="docs/images/image034.gif" data-border="0" width="118"
-height="40" />
+![](docs/images/image034.gif)
 
-<img src="docs/images/image035.gif" data-border="0" width="156"
-height="20" />
+![](docs/images/image035.gif)
 
-<img src="docs/images/image036.gif" data-border="0" width="250"
-height="20" />
+![](docs/images/image036.gif)
 
-<img src="docs/images/image037.gif" data-border="0" width="250"
-height="40" />
+![](docs/images/image037.gif)
 
-<img src="docs/images/image038.gif" data-border="0" width="250"
-height="20" />
+![](docs/images/image038.gif)
 
-<img src="docs/images/image039.gif" data-border="0" width="30"
-height="20" />
+![](docs/images/image039.gif)
 
-<img src="docs/images/image040.gif" data-border="0" width="120"
-height="40" />
+![](docs/images/image040.gif)
 
-<img src="docs/images/image041.gif" data-border="0" width="150"
-height="20" />
+![](docs/images/image041.gif)
 
-<img src="docs/images/image042.gif" data-border="0" width="200"
-height="20" />
+![](docs/images/image042.gif)
 
-<img src="docs/images/image043.gif" data-border="0" width="250"
-height="40" />
+![](docs/images/image043.gif)
 
-<img src="docs/images/image044.gif" data-border="0" width="200"
-height="20" />
+![](docs/images/image044.gif)
 
 The hypotenuse (R) cancels out in the equation.
 
@@ -1010,42 +982,31 @@ called.
 This method rotates a vector around the X axis by a given number of
 degrees (Euler rotation around X).
 
-<img src="docs/images/image045.gif" width="412" height="177" />
+![](docs/images/image045.gif)
 
-<img src="docs/images/image046.gif" width="412" height="177" />
+![](docs/images/image046.gif)
 
-<img src="docs/images/image047.gif" data-border="0" width="30"
-height="20" />
+![](docs/images/image047.gif)
 
-<img src="docs/images/image048.gif" data-border="0" width="122"
-height="40" />
+![](docs/images/image048.gif)
 
-<img src="docs/images/image049.gif" data-border="0" width="156"
-height="20" />
+![](docs/images/image049.gif)
 
-<img src="docs/images/image050.gif" data-border="0" width="278"
-height="20" />
+![](docs/images/image050.gif)
 
-<img src="docs/images/image051.gif" data-border="0" width="266"
-height="40" />
+![](docs/images/image051.gif)
 
-<img src="docs/images/image052.gif" data-border="0" width="280"
-height="20" />
+![](docs/images/image052.gif)
 
-<img src="docs/images/image053.gif" data-border="0" width="118"
-height="40" />
+![](docs/images/image053.gif)
 
-<img src="docs/images/image054.gif" data-border="0" width="154"
-height="20" />
+![](docs/images/image054.gif)
 
-<img src="docs/images/image055.gif" data-border="0" width="288"
-height="20" />
+![](docs/images/image055.gif)
 
-<img src="docs/images/image056.gif" data-border="0" width="274"
-height="40" />
+![](docs/images/image056.gif)
 
-<img src="docs/images/image057.gif" data-border="0" width="277"
-height="20" />
+![](docs/images/image057.gif)
 
 The hypotenuse (R) cancels out in the equation.
 
@@ -1072,42 +1033,31 @@ called.
 This method rotates a vector around the Z axis by a given number of
 degrees (Euler rotation around Z).
 
-<img src="docs/images/image058.gif" width="412" height="177" />
+![](docs/images/image058.gif)
 
-<img src="docs/images/image046.gif" width="412" height="177" />
+![](docs/images/image046.gif)
 
-<img src="docs/images/image059.gif" data-border="0" width="120"
-height="40" />
+![](docs/images/image059.gif)
 
-<img src="docs/images/image060.gif" data-border="0" width="156"
-height="20" />
+![](docs/images/image060.gif)
 
-<img src="docs/images/image061.gif" data-border="0" width="276"
-height="20" />
+![](docs/images/image061.gif)
 
-<img src="docs/images/image062.gif" data-border="0" width="264"
-height="40" />
+![](docs/images/image062.gif)
 
-<img src="docs/images/image063.gif" data-border="0" width="280"
-height="20" />
+![](docs/images/image063.gif)
 
-<img src="docs/images/image064.gif" data-border="0" width="120"
-height="40" />
+![](docs/images/image064.gif)
 
-<img src="docs/images/image065.gif" data-border="0" width="156"
-height="20" />
+![](docs/images/image065.gif)
 
-<img src="docs/images/image066.gif" data-border="0" width="290"
-height="20" />
+![](docs/images/image066.gif)
 
-<img src="docs/images/image067.gif" data-border="0" width="276"
-height="40" />
+![](docs/images/image067.gif)
 
-<img src="docs/images/image068.gif" data-border="0" width="282"
-height="20" />
+![](docs/images/image068.gif)
 
-<img src="docs/images/image069.gif" data-border="0" width="30"
-height="20" />
+![](docs/images/image069.gif)
 
 The hypotenuse (R) cancels out in the equation.
 
@@ -1136,20 +1086,15 @@ the normal represents a back facing plane given a line-of-sight vector.
 A back facing plane will be invisible in a rendered scene and as such
 can be except from many scene calculations.
 
-<img src="docs/images/image070.gif" width="495" height="192" />
+![](docs/images/image070.gif)
 
-<img src="docs/images/image071.gif" data-border="0" width="350"
-height="20" />
+![](docs/images/image071.gif)
 
-If <img src="docs/images/image072.gif" data-border="0" width="30"
-height="20" /> then if
-<img src="docs/images/image073.gif" data-border="0" width="200"
-height="20" />
+If ![](docs/images/image072.gif) then if
+![](docs/images/image073.gif)
 
-If <img src="docs/images/image074.gif" data-border="0" width="30"
-height="20" /> then if
-<img src="docs/images/image075.gif" data-border="0" width="200"
-height="20" />
+If ![](docs/images/image074.gif) then if
+![](docs/images/image075.gif)
 
 ```csharp
 public static bool IsBackFace(Vector normal, Vector lineOfSight)

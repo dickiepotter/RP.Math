@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300" viewBox="0 0 500 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
-  <rect x="0.5" y="0.5" width="499" height="299" rx="12" fill="#f6f8fa" stroke="#d0d7de"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="272" viewBox="0 0 500 272" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect x="0.5" y="0.5" width="499" height="271" rx="12" fill="#f6f8fa" stroke="#d0d7de"/>
   <text x="20" y="30" font-size="16" font-weight="600" fill="#24292f">Component-wise min / max = bounding-box corners</text>
 
   <!-- axis hint -->
@@ -26,5 +26,4 @@
   <text x="34" y="224" font-size="13" fill="#1a7f37" font-weight="600">ComponentMin</text>
   <text x="50" y="240" font-size="12" fill="#57606a">(min x, min y)</text>
 
-  <text x="20" y="280" font-size="13" fill="#24292f">Each axis is taken independently &#8212; the result corners bound A and B.</text>
 </svg>
