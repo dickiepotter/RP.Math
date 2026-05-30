@@ -1,0 +1,66 @@
+<div class="veditor" style="--accent:@Color">
+    <div class="veditor__title">
+        <span class="dot"></span>@Label
+        <span class="veditor__vals">(@Fmt(X), @Fmt(Y), @Fmt(Z))</span>
+    </div>
+
+    @Row("x", 0, X)
+    @Row("y", 1, Y)
+    @Row("z", 2, Z)
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Color { get; set; } = "#ffffff";
+
+    [Parameter] public double X { get; set; }
+    [Parameter] public EventCallback<double> XChanged { get; set; }
+    [Parameter] public double Y { get; set; }
+    [Parameter] public EventCallback<double> YChanged { get; set; }
+    [Parameter] public double Z { get; set; }
+    [Parameter] public EventCallback<double> ZChanged { get; set; }
+
+    private RenderFragment Row(string name, int axis, double value) => builder =>
+    {
+        // Rendered manually so the slider and number stay in sync with the bound value.
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "veditor__row");
+
+        builder.OpenElement(2, "label");
+        builder.AddContent(3, name);
+        builder.CloseElement();
+
+        builder.OpenElement(4, "input");
+        builder.AddAttribute(5, "type", "range");
+        builder.AddAttribute(6, "min", "-5");
+        builder.AddAttribute(7, "max", "5");
+        builder.AddAttribute(8, "step", "0.1");
+        builder.AddAttribute(9, "value", Fmt(value));
+        builder.AddAttribute(10, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, e => Set(axis, e)));
+        builder.CloseElement();
+
+        builder.OpenElement(11, "input");
+        builder.AddAttribute(12, "type", "number");
+        builder.AddAttribute(13, "step", "0.1");
+        builder.AddAttribute(14, "class", "num");
+        builder.AddAttribute(15, "value", Fmt(value));
+        builder.AddAttribute(16, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, e => Set(axis, e)));
+        builder.CloseElement();
+
+        builder.CloseElement();
+    };
+
+    private async Task Set(int axis, ChangeEventArgs e)
+    {
+        var s = Convert.ToString(e.Value, CultureInfo.InvariantCulture);
+        if (!double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v)) return;
+        switch (axis)
+        {
+            case 0: X = v; await XChanged.InvokeAsync(v); break;
+            case 1: Y = v; await YChanged.InvokeAsync(v); break;
+            default: Z = v; await ZChanged.InvokeAsync(v); break;
+        }
+    }
+
+    private static string Fmt(double d) => d.ToString("0.###", CultureInfo.InvariantCulture);
+}

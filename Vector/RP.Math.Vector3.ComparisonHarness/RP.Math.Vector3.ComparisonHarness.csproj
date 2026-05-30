@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>RP.Math.Vector3.ComparisonHarness</AssemblyName>
+    <RootNamespace>RP.Math.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MathNet.Numerics" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RP.Math.Vector3\RP.Math.Vector3.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Exocortex.Geometry3D">
+      <HintPath>Lib\Exocortex.Geometry3D.dll</HintPath>
+    </Reference>
+    <Reference Include="Seven">
+      <HintPath>Lib\Seven.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Lib\Exocortex.Geometry3D.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Lib\Seven.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
