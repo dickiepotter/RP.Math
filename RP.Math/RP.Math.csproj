@@ -1,17 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
     <AssemblyName>RP.Math</AssemblyName>
     <RootNamespace>RP.Math</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- NuGet package -->
+    <PackageId>RP.Math</PackageId>
+    <Description>Numeric helpers (double tolerance comparison and ULP / expanded-double utilities) underpinning the RP.Math.Vector3 type.</Description>
+    <PackageTags>math;double;tolerance;ulp;numerics</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\LICENSE.txt" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>

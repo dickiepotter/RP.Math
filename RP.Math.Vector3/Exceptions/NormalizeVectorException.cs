@@ -42,9 +42,16 @@ namespace RP.Math.Exceptions
         /// <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination. </param>
         /// <exception cref="T:System.ArgumentNullException">The <paramref name="info"/> parameter is null. </exception>
         /// <exception cref="T:System.Runtime.Serialization.SerializationException">The class name is null or <see cref="P:System.Exception.HResult"/> is zero (0). </exception>
+#if NET8_0_OR_GREATER
+        [Obsolete("Legacy formatter-based serialization is obsolete; retained for binary back-compatibility.")]
+#pragma warning disable SYSLIB0051
+#endif
         protected NormalizeVectorException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#if NET8_0_OR_GREATER
+#pragma warning restore SYSLIB0051
+#endif
     }
 }

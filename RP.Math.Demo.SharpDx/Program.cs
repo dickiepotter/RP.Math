@@ -1,102 +1,118 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace RP.Math.Demo.SharpDx
 {
-    using System.Drawing;
+    using System;
+    using System.Numerics;
+    using System.Runtime.CompilerServices;
+    using System.Windows.Forms;
 
-    using SharpDX;
-    using SharpDX.Direct3D9;
-    using SharpDX.Windows;
+    using Vortice.Direct3D9;
+    using Vortice.Mathematics;
 
-    class Program
+    /// <summary>
+    /// A minimal Direct3D9 demo that renders a spinning-free coloured cube.
+    /// </summary>
+    /// <remarks>
+    /// Originally written against SharpDX (archived/unmaintained since 2019). Ported to
+    /// Vortice.Windows (Vortice.Direct3D9), the maintained successor. The former
+    /// <c>SharpDX.Windows.RenderForm</c> / <c>RenderLoop.Run</c> have been replaced with a
+    /// plain WinForms <see cref="Form"/> and a simple message-pumped render loop.
+    /// </remarks>
+    internal static class Program
     {
-        #region Entry Point to Application
+        private const int Width = 800;
+        private const int Height = 600;
+
+        /// <summary>Number of bytes in a single <see cref="Vector4"/> (one vertex attribute).</summary>
+        private static readonly int Vector4Size = Unsafe.SizeOf<Vector4>();
+
+        /// <summary>The form on which rendering will be done.</summary>
+        private static Form form = null!;
+
+        private static IDirect3D9 direct3D = null!;
+        private static IDirect3DDevice9 device = null!;
+        private static IDirect3DVertexBuffer9 vertexBuffer = null!;
+        private static IDirect3DVertexDeclaration9 vertexDeclaration = null!;
 
         /// <summary>
-        /// The entry point for the application
+        /// The entry point for the application.
         /// </summary>
-        /// <param name="args">
-        /// The commandline arguments.
-        /// </param>
-        public static void Main(string[] args)
+        [STAThread]
+        public static void Main()
         {
-            // Create Render Form
             Initialize();
 
-            // Run the drawing loop
-            RenderLoop.Run(form, Draw);
+            // Show the window and run a simple render loop. This replaces the old
+            // SharpDX RenderLoop.Run(form, Draw); Vortice ships no equivalent helper.
+            form.Show();
+            while (!form.IsDisposed)
+            {
+                Draw();
+                Application.DoEvents();
+            }
+
+            DisposeResources();
         }
 
-        #endregion
+        /// <summary>
+        /// Create the render form, the Direct3D device and the cube geometry.
+        /// </summary>
+        private static void Initialize()
+        {
+            form = new Form
+            {
+                Text = "RP.Math — Vortice Direct3D9 Demo",
+                ClientSize = new System.Drawing.Size(Width, Height),
+            };
 
-        #region Drawing Loop
+            direct3D = D3D9.Direct3DCreate9();
+
+            var presentation = new PresentParameters
+            {
+                BackBufferWidth = Width,
+                BackBufferHeight = Height,
+                BackBufferFormat = Format.X8R8G8B8,
+                BackBufferCount = 1,
+                SwapEffect = SwapEffect.Discard,
+                DeviceWindowHandle = form.Handle,
+                Windowed = true,
+                EnableAutoDepthStencil = true,
+                AutoDepthStencilFormat = Format.D16,
+                PresentationInterval = PresentInterval.Immediate,
+            };
+
+            device = direct3D.CreateDevice(
+                0,
+                DeviceType.Hardware,
+                form.Handle,
+                CreateFlags.HardwareVertexProcessing,
+                presentation);
+
+            CreateCube();
+        }
 
         /// <summary>
-        /// The drawing loop where we put thing on screen each time the form renders
+        /// The drawing loop body, run once per frame.
         /// </summary>
         private static void Draw()
         {
-            device.Clear(ClearFlags.Target | ClearFlags.ZBuffer, SharpDX.Color.Black, 1.0f, 0);
+            device.Clear(ClearFlags.Target | ClearFlags.ZBuffer, new Color(0f, 0f, 0f, 1f), 1.0f, 0);
             device.BeginScene();
 
-            DrawCube();
+            // Each vertex is a position Vector4 followed by a colour Vector4 (stride = 2 * Vector4).
+            device.SetStreamSource(0, vertexBuffer, 0, (uint)(Vector4Size * 2));
+            device.VertexDeclaration = vertexDeclaration;
+            device.DrawPrimitive(PrimitiveType.TriangleList, 0, 12);
 
             device.EndScene();
             device.Present();
         }
 
-        #endregion
-
-        #region Initialize
-
         /// <summary>
-        /// The form on which rendering will be done
+        /// Build the cube's vertex buffer and vertex declaration once, up front.
         /// </summary>
-        private static RenderForm form;
-
-        /// <summary>
-        /// Initial form width
-        /// </summary>
-        private const int Width = 800;
-
-        /// <summary>
-        /// Initial form height
-        /// </summary>
-        private const int Height = 600;
-
-        /// <summary>
-        /// The DirectX device configuration
-        /// </summary>
-        private static Device device;
-
-
-        // Create the Render form and DirectX device
-        private static void Initialize()
+        private static void CreateCube()
         {
-            form = new RenderForm("ShardDX Demo")
-            {
-                ClientSize = new Size(Width, Height)
-            };
-
-            var direct3d = new Direct3D();
-
-            var presentation = new PresentParameters(form.ClientSize.Width, form.ClientSize.Height);
-
-            device = new Device(direct3d, 0, DeviceType.Hardware, form.Handle, CreateFlags.HardwareVertexProcessing, presentation);
-        }
-
-        #endregion
-
-        #region Cube
-
-        private static void DrawCube()
-        {
-            var vertices = new VertexBuffer(device, Utilities.SizeOf<Vector4>() * 2 * 36, Usage.WriteOnly, VertexFormat.None, Pool.Managed);
-            vertices.Lock(0, 0, LockFlags.None).WriteRange(new[]
+            var vertices = new[]
             {
                 new Vector4(-1.0f, -1.0f, -1.0f, 1.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f), // Front
                 new Vector4(-1.0f,  1.0f, -1.0f, 1.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f),
@@ -105,7 +121,7 @@ namespace RP.Math.Demo.SharpDx
                 new Vector4( 1.0f,  1.0f, -1.0f, 1.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f),
                 new Vector4( 1.0f, -1.0f, -1.0f, 1.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f),
 
-                new Vector4(-1.0f, -1.0f,  1.0f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f), // BACK
+                new Vector4(-1.0f, -1.0f,  1.0f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f), // Back
                 new Vector4( 1.0f,  1.0f,  1.0f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
                 new Vector4(-1.0f,  1.0f,  1.0f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
                 new Vector4(-1.0f, -1.0f,  1.0f, 1.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f),
@@ -139,25 +155,38 @@ namespace RP.Math.Demo.SharpDx
                 new Vector4( 1.0f, -1.0f, -1.0f, 1.0f), new Vector4(0.0f, 1.0f, 1.0f, 1.0f),
                 new Vector4( 1.0f,  1.0f, -1.0f, 1.0f), new Vector4(0.0f, 1.0f, 1.0f, 1.0f),
                 new Vector4( 1.0f,  1.0f,  1.0f, 1.0f), new Vector4(0.0f, 1.0f, 1.0f, 1.0f),
-            });
-            vertices.Unlock();
+            };
 
-            // Allocate Vertex Elements
-            var vertexElems = new[] {
-        		new VertexElement(0, 0, DeclarationType.Float4, DeclarationMethod.Default, DeclarationUsage.Position, 0),
-        		new VertexElement(0, 16, DeclarationType.Float4, DeclarationMethod.Default, DeclarationUsage.Color, 0),
-				VertexElement.VertexDeclarationEnd
-        	};
+            vertexBuffer = device.CreateVertexBuffer(
+                (uint)(Vector4Size * vertices.Length),
+                Usage.WriteOnly,
+                VertexFormat.None,
+                Pool.Managed);
 
-            // Creates and sets the Vertex Declaration
-            var vertexDecl = new VertexDeclaration(device, vertexElems);
-            device.SetStreamSource(0, vertices, 0, Utilities.SizeOf<Vector4>() * 2);
-            device.VertexDeclaration = vertexDecl;
+            var target = vertexBuffer.Lock<Vector4>(0, 0, LockFlags.None);
+            vertices.CopyTo(target);
+            vertexBuffer.Unlock();
 
-            // Draw the cube
-            device.DrawPrimitives(PrimitiveType.TriangleList, 0, 12);
+            var vertexElements = new[]
+            {
+                new VertexElement(0, 0, DeclarationType.Float4, DeclarationMethod.Default, DeclarationUsage.Position, 0),
+                new VertexElement(0, 16, DeclarationType.Float4, DeclarationMethod.Default, DeclarationUsage.Color, 0),
+                VertexElement.VertexDeclarationEnd,
+            };
+
+            vertexDeclaration = device.CreateVertexDeclaration(vertexElements);
         }
 
-        #endregion
+        /// <summary>
+        /// Release the Direct3D resources.
+        /// </summary>
+        private static void DisposeResources()
+        {
+            vertexDeclaration?.Dispose();
+            vertexBuffer?.Dispose();
+            device?.Dispose();
+            direct3D?.Dispose();
+            form?.Dispose();
+        }
     }
 }

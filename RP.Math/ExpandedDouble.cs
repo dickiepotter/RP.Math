@@ -243,7 +243,7 @@ namespace RP.Math
         #region Operators
 
         /// <summary>
-        /// Convert a <see cref="System.double"/> into an <see cref="ExpandedDouble"/>
+        /// Convert a <see cref="System.Double"/> into an <see cref="ExpandedDouble"/>
         /// </summary>
         /// <param name="d">The <see cref="System.Double"/> to convert.</param>
         public static explicit operator ExpandedDouble(double d)

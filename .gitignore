@@ -233,3 +233,9 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# Visual Studio workspace cache
+.vs/
+
+# Local documentation working scratch
+Guide/_work/

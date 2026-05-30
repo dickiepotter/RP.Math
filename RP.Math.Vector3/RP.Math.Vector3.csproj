@@ -1,18 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
     <AssemblyName>RP.Math.Vector3</AssemblyName>
     <RootNamespace>RP.Math</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- NuGet package -->
+    <PackageId>RP.Math.Vector3</PackageId>
+    <Description>A clear, well-documented double-precision 3D vector (Vector3) type for C# using Cartesian coordinates and Euclidean geometry. Favours readability over raw speed.</Description>
+    <PackageTags>vector;vector3;3d;math;geometry;cartesian;euclidean</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\LICENSE.txt" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RP.Math\RP.Math.csproj" />

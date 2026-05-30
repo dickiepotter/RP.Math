@@ -56,7 +56,7 @@
 
             RunVector3Tests(results);
             RunMathNetTests(results);
-            RunSharpDxTests(results);
+            RunSystemNumericsTests(results);
             RunSevenTests(results);
             RunExocortexTests(results);
 
@@ -64,17 +64,20 @@
         }
 
         /// <summary>
-        /// Run tests for SharpDx
+        /// Run tests for System.Numerics (the framework's built-in, SIMD-accelerated vector type).
         /// </summary>
-        /// <seealso cref="http://sharpdx.org/"/>
+        /// <remarks>
+        /// Replaces the original SharpDX benchmark: SharpDX was archived in 2019 and is no longer
+        /// maintained, whereas <see cref="System.Numerics.Vector3"/> ships with the runtime.
+        /// Note both are single-precision (float), unlike RP.Math.Vector3 which is double-precision.
+        /// </remarks>
         /// <param name="results">The collection of results to add to</param>
-        /// <remarks>Included using Nuget</remarks>
-        private static void RunSharpDxTests(Dictionary<string, long> results)
+        private static void RunSystemNumericsTests(Dictionary<string, long> results)
         {
-            var libraryName = "SharpDX";
+            var libraryName = "System.Numerics";
 
-            var a = new SharpDX.Vector3(2, 4, 6);
-            var b = new SharpDX.Vector3(5, 7, 10);
+            var a = new System.Numerics.Vector3(2, 4, 6);
+            var b = new System.Numerics.Vector3(5, 7, 10);
 
             results.Add(
                 "Cross Product => " + libraryName,
@@ -82,7 +85,7 @@
                     iterations,
                     () =>
                         {
-                            var result = SharpDX.Vector3.Cross(a, b);
+                            var result = System.Numerics.Vector3.Cross(a, b);
                         }));
 
             results.Add(
@@ -91,7 +94,7 @@
                     iterations,
                     () =>
                         {
-                            var result = SharpDX.Vector3.Dot(a, b);
+                            var result = System.Numerics.Vector3.Dot(a, b);
                         }));
 
             results.Add(
@@ -100,9 +103,8 @@
                     iterations,
                     () =>
                         {
-                            // Mutable
-                            var vector = new SharpDX.Vector3(2, 4, 6);
-                            vector.Normalize();
+                            var vector = new System.Numerics.Vector3(2, 4, 6);
+                            var result = System.Numerics.Vector3.Normalize(vector);
                         }));
 
             results.Add(
