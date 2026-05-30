@@ -6,8 +6,6 @@
     <UseWindowsForms>true</UseWindowsForms>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>RP.Math.Demo.Direct3D9</AssemblyName>
-    <RootNamespace>RP.Math.Demo.SharpDx</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

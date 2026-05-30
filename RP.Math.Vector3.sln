@@ -18,7 +18,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{5170B2
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RP.Math.Demo.SharpDx", "RP.Math.Demo.SharpDx\RP.Math.Demo.SharpDx.csproj", "{911E761E-956E-4F9C-8BC1-B74A74EB9906}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RP.Math.Demo.Direct3D9", "RP.Math.Demo.Direct3D9\RP.Math.Demo.Direct3D9.csproj", "{911E761E-956E-4F9C-8BC1-B74A74EB9906}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
