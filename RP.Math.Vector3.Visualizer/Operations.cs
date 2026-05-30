@@ -128,6 +128,30 @@ public static class Operations
         Add("max", "Max(A, B)", "Geometry", "greater of |A|, |B|",
             "Returns whichever of A or B has the greater magnitude (length) — not a component-wise maximum.",
             c => OpResult.Vec(c.A.Max(c.B)), Input.B);
+        Add("reflectNormal", "Reflect A about normal B", "Geometry", "A − 2(A·n̂)n̂",
+            "Reflects A about the surface whose normal is B (a bounce). B is normalised internally.",
+            c => OpResult.Vec(c.A.Reflect(c.B)), Input.B);
+        Add("slerp", "Slerp(A, B, t)", "Geometry", "spherical interpolation",
+            "Interpolates direction along the great-circle arc between A and B (magnitude blended linearly).",
+            c => OpResult.Vec(c.A.Slerp(c.B, c.Control)), Input.B, Input.Control);
+        Add("moveTowards", "MoveTowards(A → B, step)", "Geometry", "step from A towards B",
+            "Moves A towards target B by at most 'step', stopping exactly on B.",
+            c => OpResult.Vec(c.A.MoveTowards(c.B, c.Scalar)), Input.B, Input.Scalar);
+        Add("distanceSq", "DistanceSquared(A, B)", "Geometry", "|A − B|²",
+            "The squared distance between the tips — cheaper than Distance (no square root).",
+            c => OpResult.Num(c.A.DistanceSquared(c.B)), Input.B);
+        Add("componentMin", "Component min(A, B)", "Geometry", "(min xs, min ys, min zs)",
+            "A true component-wise minimum (each axis independently), unlike magnitude-based Min.",
+            c => OpResult.Vec(c.A.ComponentMin(c.B)), Input.B);
+        Add("componentMax", "Component max(A, B)", "Geometry", "(max xs, max ys, max zs)",
+            "A true component-wise maximum (each axis independently), unlike magnitude-based Max.",
+            c => OpResult.Vec(c.A.ComponentMax(c.B)), Input.B);
+        Add("clamp", "Clamp(A, min B, max C)", "Geometry", "clamp each component",
+            "Clamps each component of A between the matching components of B (min) and C (max).",
+            c => OpResult.Vec(c.A.Clamp(c.B, c.C)), Input.B, Input.C);
+        Add("clampMag", "ClampMagnitude(A, max)", "Geometry", "cap |A| at max",
+            "Caps A's length at 'max', keeping its direction.",
+            c => OpResult.Vec(c.A.ClampMagnitude(c.Scalar)), Input.Scalar);
 
         // ---- Rotation (degrees in, applied as radians) ----
         Add("rotateX", "Rotate about X", "Rotation", "Rx(θ) · A",
@@ -159,6 +183,9 @@ public static class Operations
         Add("sumComponentSqrs", "Sum of squares", "Components", "x² + y² + z²",
             "Adds the squares of the components (magnitude squared).",
             c => OpResult.Num(c.A.SumComponentSqrs()));
+        Add("magnitudeSq", "Magnitude squared", "Components", "|A|²",
+            "The squared magnitude — cheaper than Magnitude when only comparing lengths.",
+            c => OpResult.Num(c.A.MagnitudeSquared));
         Add("sqrtComponents", "Sqrt of components", "Components", "(√x, √y, √z)",
             "Square root of each component.",
             c => OpResult.Vec(c.A.SqrtComponents()));
@@ -179,6 +206,9 @@ public static class Operations
         Add("isNaN", "Is NaN?", "Predicates", "any component NaN",
             "True when any component is Not-a-Number.",
             c => OpResult.Bool(c.A.IsNaN()));
+        Add("isZero", "Is zero?", "Predicates", "|A| ≈ 0",
+            "True when the vector's magnitude is within tolerance of zero.",
+            c => OpResult.Bool(c.A.IsZero(c.Tolerance)), Input.Tolerance);
         Add("isPerp", "Is perpendicular to B?", "Predicates", "A · B ≈ 0",
             "True when A and B meet at a right angle (within tolerance).",
             c => OpResult.Bool(c.A.IsPerpendicular(c.B, c.Tolerance)), Input.B, Input.Tolerance);

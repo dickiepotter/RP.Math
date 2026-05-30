@@ -358,5 +358,188 @@ namespace RP.Math.Tests
         }
 
         #endregion
+
+        #region Reflect-about-normal Tests
+
+        [TestMethod, TestCategory("Reflect")]
+        public void Reflect_OffAFlatSurface_ShouldMirrorThroughTheNormal_Test()
+        {
+            // A downward velocity bouncing off a floor whose normal points up.
+            var velocity = new Vector3(1, -1, 0);
+            var up = new Vector3(0, 1, 0);
+
+            var result = Vector3.Reflect(velocity, up);
+
+            result.X.Should().Be(1);
+            result.Y.Should().Be(1, "the component along the normal is reversed");
+            result.Z.Should().Be(0);
+
+            velocity.Reflect(up).Should().Be(result);
+        }
+
+        [TestMethod, TestCategory("Reflect")]
+        public void Reflect_WithANonUnitNormal_ShouldStillNormaliseIt_Test()
+        {
+            var velocity = new Vector3(1, -1, 0);
+            var up = new Vector3(0, 5, 0); // not unit length
+
+            var result = Vector3.Reflect(velocity, up);
+
+            result.X.Should().Be(1);
+            result.Y.Should().Be(1);
+            result.Z.Should().Be(0);
+        }
+
+        #endregion
+
+        #region Componentwise Min, Max and Clamp Tests
+
+        [TestMethod, TestCategory("Componentwise")]
+        public void ComponentMin_ShouldTakeTheSmallerOfEachComponent_Test()
+        {
+            var result = new Vector3(1, 5, 3).ComponentMin(new Vector3(4, 2, 6));
+
+            result.Should().Be(new Vector3(1, 2, 3));
+        }
+
+        [TestMethod, TestCategory("Componentwise")]
+        public void ComponentMax_ShouldTakeTheLargerOfEachComponent_Test()
+        {
+            var result = new Vector3(1, 5, 3).ComponentMax(new Vector3(4, 2, 6));
+
+            result.Should().Be(new Vector3(4, 5, 6));
+        }
+
+        [TestMethod, TestCategory("Componentwise")]
+        public void Clamp_ShouldConstrainEachComponentToTheRange_Test()
+        {
+            var result = new Vector3(5, -5, 2).Clamp(new Vector3(0, 0, 0), new Vector3(3, 3, 3));
+
+            result.Should().Be(new Vector3(3, 0, 2));
+        }
+
+        #endregion
+
+        #region Distance-squared, Clamp-magnitude and Move-towards Tests
+
+        [TestMethod, TestCategory("Distance")]
+        public void DistanceSquared_ShouldBeTheSquareOfTheDistance_Test()
+        {
+            Vector3.DistanceSquared(new Vector3(0, 0, 0), new Vector3(3, 4, 0)).Should().Be(25);
+        }
+
+        [TestMethod, TestCategory("ClampMagnitude")]
+        public void ClampMagnitude_WhereMagnitudeExceedsTheMax_ShouldShortenInTheSameDirection_Test()
+        {
+            var result = new Vector3(3, 4, 0).ClampMagnitude(2.5); // magnitude 5 -> 2.5
+
+            result.X.Should().Be(1.5);
+            result.Y.Should().Be(2);
+            result.Z.Should().Be(0);
+            result.Magnitude.Should().Be(2.5);
+        }
+
+        [TestMethod, TestCategory("ClampMagnitude")]
+        public void ClampMagnitude_WhereMagnitudeIsWithinTheMax_ShouldBeUnchanged_Test()
+        {
+            var vector = new Vector3(3, 4, 0); // magnitude 5
+
+            vector.ClampMagnitude(10).Should().Be(vector);
+        }
+
+        [TestMethod, TestCategory("MoveTowards")]
+        public void MoveTowards_WithASmallStep_ShouldMovePartWay_Test()
+        {
+            var result = new Vector3(0, 0, 0).MoveTowards(new Vector3(10, 0, 0), 3);
+
+            result.Should().Be(new Vector3(3, 0, 0));
+        }
+
+        [TestMethod, TestCategory("MoveTowards")]
+        public void MoveTowards_WithAStepBeyondTheTarget_ShouldStopOnTheTarget_Test()
+        {
+            var target = new Vector3(10, 0, 0);
+
+            new Vector3(0, 0, 0).MoveTowards(target, 100).Should().Be(target);
+        }
+
+        #endregion
+
+        #region Slerp Tests
+
+        [TestMethod, TestCategory("Slerp")]
+        public void Slerp_HalfwayBetweenTwoPerpendicularUnitVectors_ShouldBeOnTheArc_Test()
+        {
+            var result = Vector3.XAxis.Slerp(Vector3.YAxis, 0.5);
+
+            var expected = Math.Sqrt(0.5); // ~0.70710678
+            Math.Round(result.X, 6).Should().Be(Math.Round(expected, 6));
+            Math.Round(result.Y, 6).Should().Be(Math.Round(expected, 6));
+            Math.Round(result.Z, 6).Should().Be(0);
+            Math.Round(result.Magnitude, 6).Should().Be(1, "slerp between unit vectors stays on the unit sphere");
+        }
+
+        [TestMethod, TestCategory("Slerp")]
+        public void Slerp_AtTheEndpoints_ShouldReturnTheEndpoints_Test()
+        {
+            Vector3.XAxis.Slerp(Vector3.YAxis, 0).Should().Be(Vector3.XAxis);
+            Vector3.XAxis.Slerp(Vector3.YAxis, 1).Should().Be(Vector3.YAxis);
+        }
+
+        [TestMethod, TestCategory("Slerp")]
+        public void Slerp_BetweenParallelVectors_ShouldFallBackToLinearInterpolation_Test()
+        {
+            var result = new Vector3(1, 0, 0).Slerp(new Vector3(3, 0, 0), 0.5);
+
+            result.X.Should().Be(2);
+            result.Y.Should().Be(0);
+            result.Z.Should().Be(0);
+        }
+
+        #endregion
+
+        #region Squared magnitude, IsZero, Deconstruct and tuple Tests
+
+        [TestMethod, TestCategory("Components")]
+        public void MagnitudeSquared_ShouldEqualTheSumOfTheSquares_Test()
+        {
+            new Vector3(3, 4, 0).MagnitudeSquared.Should().Be(25);
+        }
+
+        [TestMethod, TestCategory("Predicate")]
+        public void IsZero_ForTheZeroVector_ShouldBeTrue_Test()
+        {
+            new Vector3(0, 0, 0).IsZero().Should().BeTrue();
+            new Vector3(0, 1, 0).IsZero().Should().BeFalse();
+        }
+
+        [TestMethod, TestCategory("Predicate")]
+        public void IsZero_WithinTolerance_ShouldTreatTinyVectorsAsZero_Test()
+        {
+            new Vector3(0.05, 0, 0).IsZero(0.1).Should().BeTrue();
+            new Vector3(0.5, 0, 0).IsZero(0.1).Should().BeFalse();
+        }
+
+        [TestMethod, TestCategory("Conversion")]
+        public void Deconstruct_ShouldYieldTheComponents_Test()
+        {
+            var (x, y, z) = new Vector3(1, 2, 3);
+
+            x.Should().Be(1);
+            y.Should().Be(2);
+            z.Should().Be(3);
+        }
+
+        [TestMethod, TestCategory("Conversion")]
+        public void ImplicitTupleConversions_ShouldRoundTrip_Test()
+        {
+            Vector3 fromTuple = (1d, 2d, 3d);
+            fromTuple.Should().Be(new Vector3(1, 2, 3));
+
+            (double x, double y, double z) toTuple = new Vector3(4, 5, 6);
+            toTuple.Should().Be((4d, 5d, 6d));
+        }
+
+        #endregion
     }
 }

@@ -1329,6 +1329,257 @@ namespace RP.Math
 
         #endregion
 
+        #region Additional Operations
+
+        #region Reflect about a normal
+
+        /// <summary>
+        /// Reflect a vector about a surface described by the given normal (a "bounce").
+        /// </summary>
+        /// <param name="vector">The incident vector to reflect.</param>
+        /// <param name="normal">The surface normal to reflect about (normalised internally).</param>
+        /// <returns>The reflected vector, <c>v - 2 (v . n) n</c> for a unit normal n.</returns>
+        /// <remarks>
+        /// This differs from <see cref="Reflection(Vector3, Vector3)"/>, which mirrors a vector about the
+        /// line of another vector. Reflect mirrors a vector about the plane/surface described by a normal,
+        /// as used for bouncing a ray, velocity or light off a surface.
+        /// </remarks>
+        public static Vector3 Reflect(Vector3 vector, Vector3 normal)
+        {
+            var unitNormal = normal.NormalizeOrDefault();
+            return vector - 2 * vector.DotProduct(unitNormal) * unitNormal;
+        }
+
+        /// <summary>
+        /// Reflect this vector about a surface described by the given normal (a "bounce").
+        /// </summary>
+        /// <param name="normal">The surface normal to reflect about (normalised internally).</param>
+        /// <returns>The reflected vector.</returns>
+        public Vector3 Reflect(Vector3 normal)
+        {
+            return Reflect(this, normal);
+        }
+
+        #endregion
+
+        #region Componentwise Min, Max and Clamp
+
+        /// <summary>
+        /// Return a vector whose components are the smaller of the corresponding components of the two vectors.
+        /// </summary>
+        /// <remarks>
+        /// Unlike <see cref="Min(Vector3, Vector3)"/>, which returns whichever whole vector has the lesser
+        /// magnitude, this compares each component independently.
+        /// </remarks>
+        public static Vector3 ComponentMin(Vector3 v1, Vector3 v2)
+        {
+            return new Vector3(
+                Math.Min(v1.X, v2.X),
+                Math.Min(v1.Y, v2.Y),
+                Math.Min(v1.Z, v2.Z));
+        }
+
+        /// <summary>
+        /// Return a vector whose components are the smaller of this vector's and the other vector's components.
+        /// </summary>
+        public Vector3 ComponentMin(Vector3 other) => ComponentMin(this, other);
+
+        /// <summary>
+        /// Return a vector whose components are the larger of the corresponding components of the two vectors.
+        /// </summary>
+        /// <remarks>
+        /// Unlike <see cref="Max(Vector3, Vector3)"/>, which returns whichever whole vector has the greater
+        /// magnitude, this compares each component independently.
+        /// </remarks>
+        public static Vector3 ComponentMax(Vector3 v1, Vector3 v2)
+        {
+            return new Vector3(
+                Math.Max(v1.X, v2.X),
+                Math.Max(v1.Y, v2.Y),
+                Math.Max(v1.Z, v2.Z));
+        }
+
+        /// <summary>
+        /// Return a vector whose components are the larger of this vector's and the other vector's components.
+        /// </summary>
+        public Vector3 ComponentMax(Vector3 other) => ComponentMax(this, other);
+
+        /// <summary>
+        /// Clamp each component of a vector between the corresponding components of a minimum and maximum vector.
+        /// </summary>
+        public static Vector3 Clamp(Vector3 value, Vector3 min, Vector3 max)
+        {
+            return new Vector3(
+                Math.Min(Math.Max(value.X, min.X), max.X),
+                Math.Min(Math.Max(value.Y, min.Y), max.Y),
+                Math.Min(Math.Max(value.Z, min.Z), max.Z));
+        }
+
+        /// <summary>
+        /// Clamp each component of this vector between the corresponding components of a minimum and maximum vector.
+        /// </summary>
+        public Vector3 Clamp(Vector3 min, Vector3 max) => Clamp(this, min, max);
+
+        #endregion
+
+        #region Distance squared, clamp magnitude and move towards
+
+        /// <summary>
+        /// The square of the distance between two vectors. Cheaper than <see cref="Distance(Vector3, Vector3)"/>
+        /// (no square root) and sufficient when only comparing distances.
+        /// </summary>
+        public static double DistanceSquared(Vector3 v1, Vector3 v2)
+        {
+            double dx = v1.X - v2.X;
+            double dy = v1.Y - v2.Y;
+            double dz = v1.Z - v2.Z;
+            return (dx * dx) + (dy * dy) + (dz * dz);
+        }
+
+        /// <summary>
+        /// The square of the distance between this vector and another.
+        /// </summary>
+        public double DistanceSquared(Vector3 other) => DistanceSquared(this, other);
+
+        /// <summary>
+        /// Return a vector in the same direction whose magnitude is no greater than the given maximum.
+        /// </summary>
+        public static Vector3 ClampMagnitude(Vector3 vector, double maxMagnitude)
+        {
+            var magnitude = vector.Magnitude;
+            if (magnitude > maxMagnitude && magnitude > 0)
+            {
+                return vector * (maxMagnitude / magnitude);
+            }
+
+            return vector;
+        }
+
+        /// <summary>
+        /// Return this vector in the same direction with its magnitude capped at the given maximum.
+        /// </summary>
+        public Vector3 ClampMagnitude(double maxMagnitude) => ClampMagnitude(this, maxMagnitude);
+
+        /// <summary>
+        /// Move a vector towards a target by at most a given distance, stopping exactly on the target.
+        /// </summary>
+        public static Vector3 MoveTowards(Vector3 current, Vector3 target, double maxDistanceDelta)
+        {
+            var delta = target - current;
+            var distance = delta.Magnitude;
+            if (distance <= maxDistanceDelta || distance == 0)
+            {
+                return target;
+            }
+
+            return current + delta * (maxDistanceDelta / distance);
+        }
+
+        /// <summary>
+        /// Move this vector towards a target by at most a given distance.
+        /// </summary>
+        public Vector3 MoveTowards(Vector3 target, double maxDistanceDelta) => MoveTowards(this, target, maxDistanceDelta);
+
+        #endregion
+
+        #region Spherical interpolation
+
+        /// <summary>
+        /// Spherically interpolate between two vectors: the direction follows the shortest great-circle arc
+        /// while the magnitude is blended linearly. Falls back to linear interpolation when the vectors are
+        /// (anti)parallel or either is zero.
+        /// </summary>
+        /// <param name="v1">The vector to interpolate from (control == 0).</param>
+        /// <param name="v2">The vector to interpolate to (control == 1).</param>
+        /// <param name="control">The interpolation fraction.</param>
+        public static Vector3 Slerp(Vector3 v1, Vector3 v2, double control)
+        {
+            var n1 = v1.NormalizeOrDefault();
+            var n2 = v2.NormalizeOrDefault();
+
+            double dot = n1.DotProduct(n2);
+            if (dot > 1) { dot = 1; }
+            else if (dot < -1) { dot = -1; }
+
+            double theta = Math.Acos(dot);
+            double sinTheta = Math.Sin(theta);
+
+            if (sinTheta < 1e-9)
+            {
+                return Interpolate(v1, v2, control, true);
+            }
+
+            double a = Math.Sin((1 - control) * theta) / sinTheta;
+            double b = Math.Sin(control * theta) / sinTheta;
+            return (a * v1) + (b * v2);
+        }
+
+        /// <summary>
+        /// Spherically interpolate between this vector and another.
+        /// </summary>
+        public Vector3 Slerp(Vector3 other, double control) => Slerp(this, other, control);
+
+        #endregion
+
+        #region Squared magnitude and zero test
+
+        /// <summary>
+        /// The square of the vector's magnitude (an alias of <see cref="SumComponentSqrs()"/>), avoiding a
+        /// square root where only relative magnitudes are needed.
+        /// </summary>
+        public double MagnitudeSquared => this.SumComponentSqrs();
+
+        /// <summary>
+        /// Determine whether all three components are exactly zero.
+        /// </summary>
+        public bool IsZero()
+        {
+            return this.X == 0 && this.Y == 0 && this.Z == 0;
+        }
+
+        /// <summary>
+        /// Determine whether the vector's magnitude is within a tolerance of zero.
+        /// </summary>
+        /// <param name="tolerance">The maximum magnitude that still counts as zero.</param>
+        public bool IsZero(double tolerance)
+        {
+            return this.Magnitude <= tolerance;
+        }
+
+        #endregion
+
+        #region Deconstruction and tuple conversions
+
+        /// <summary>
+        /// Deconstruct the vector into its components, enabling <c>var (x, y, z) = vector;</c>.
+        /// </summary>
+        public void Deconstruct(out double x, out double y, out double z)
+        {
+            x = this.X;
+            y = this.Y;
+            z = this.Z;
+        }
+
+        /// <summary>
+        /// Create a vector from an (x, y, z) tuple.
+        /// </summary>
+        public static implicit operator Vector3((double x, double y, double z) components)
+        {
+            return new Vector3(components.x, components.y, components.z);
+        }
+
+        /// <summary>
+        /// Convert a vector to an (x, y, z) tuple.
+        /// </summary>
+        public static implicit operator (double X, double Y, double Z)(Vector3 vector)
+        {
+            return (vector.X, vector.Y, vector.Z);
+        }
+
+        #endregion
+
+        #endregion
+
         #region Abs Operations
 
         /// <summary>

@@ -1449,6 +1449,10 @@ following:
 
 ## History
 
-To-Do:
+Done:
 
-- Method to reflect a `Vector` about a given normal
+- Method to reflect a `Vector` about a given normal — implemented as `Reflect(normal)`
+  (distinct from `Reflection`, which mirrors about a vector's line).
+- Added for completeness: `ComponentMin`/`ComponentMax`, `Clamp`, `DistanceSquared`,
+  `ClampMagnitude`, `MoveTowards`, `Slerp`, `MagnitudeSquared`, `IsZero`, tuple
+  deconstruction/conversion, and an interactive Blazor WebAssembly visualizer.
