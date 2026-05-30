@@ -12,6 +12,7 @@
 - [Using the code](#using-the-code)
 - [Extended functionality](#extended-functionality)
 - [Usability functions](#usability-functions)
+- [Additional operations](#additional-operations)
 - [Summary](#summary)
 - [Points of Interest](#points-of-interest)
 - [History](#history)
@@ -1348,6 +1349,109 @@ public static readonly Vector origin = new Vector(0,0,0);
 public static readonly Vector xAxis = new Vector(1,0,0);
 public static readonly Vector yAxis = new Vector(0,1,0);
 public static readonly Vector zAxis = new Vector(0,0,1);
+```
+
+## Additional operations
+
+Beyond the original article, the type has grown a handful of operations that round it out for
+modern, everyday use. Each one is also available to play with in the interactive
+[visualizer](RP.Math.Vector3.Visualizer) — drag the vectors and watch the result update live.
+
+### Reflect about a normal
+
+Reflects a vector about the surface described by a **normal** — the classic "bounce" used for rays,
+velocities and light. Note this is different from `Reflection`, which mirrors a vector about the
+**line** of another vector.
+
+![Reflecting a vector about a surface normal](docs/images/feature-reflect.svg)
+
+The component of `v` along the (unit) normal is reversed, so the angle of incidence equals the angle
+of reflection:
+
+```csharp
+var incoming = new Vector3(1, -1, 0);
+var surfaceNormal = new Vector3(0, 1, 0);
+var bounced = incoming.Reflect(surfaceNormal);   // (1, 1, 0)
+```
+
+### Slerp — spherical interpolation
+
+Where `Interpolate` (linear) walks the straight **chord** between two vectors, `Slerp` walks the
+**arc** at a constant angular speed, so interpolated directions stay on the sphere. It falls back to
+linear interpolation when the vectors are (anti)parallel.
+
+![Slerp follows the arc while Lerp cuts the chord](docs/images/feature-slerp.svg)
+
+```csharp
+var a = Vector3.XAxis;             // (1, 0, 0)
+var b = Vector3.YAxis;             // (0, 1, 0)
+var halfway = a.Slerp(b, 0.5);     // ~ (0.707, 0.707, 0) — still length 1
+```
+
+### Clamp magnitude
+
+Caps a vector's length at a maximum while keeping its direction (a no-op when it is already short
+enough) — handy for limiting speeds and forces.
+
+![ClampMagnitude caps the length and keeps the direction](docs/images/feature-clampmagnitude.svg)
+
+```csharp
+var velocity = new Vector3(3, 4, 0);          // length 5
+var limited = velocity.ClampMagnitude(2.5);   // (1.5, 2, 0), length 2.5
+```
+
+### Move towards
+
+Steps from one point towards a target by at most a given distance, never overshooting — the staple
+of frame-by-frame animation and AI movement.
+
+![MoveTowards steps toward the target without overshooting](docs/images/feature-movetowards.svg)
+
+```csharp
+var position = new Vector3(0, 0, 0);
+var target = new Vector3(10, 0, 0);
+var next = position.MoveTowards(target, 3);   // (3, 0, 0)
+```
+
+### Component-wise Min, Max and Clamp
+
+`ComponentMin` / `ComponentMax` / `Clamp` work on each axis **independently**. (This is deliberately
+distinct from `Min` / `Max`, which compare whole vectors by *magnitude* and return the shorter or
+longer one.)
+
+![Clamp constrains each component into a box](docs/images/feature-clamp.svg)
+
+```csharp
+var lo = new Vector3(1, 5, 3).ComponentMin(new Vector3(4, 2, 6));            // (1, 2, 3)
+var hi = new Vector3(1, 5, 3).ComponentMax(new Vector3(4, 2, 6));            // (4, 5, 6)
+var inBox = new Vector3(5, -5, 2).Clamp(Vector3.Origin, new Vector3(3, 3, 3)); // (3, 0, 2)
+```
+
+### Cheaper comparisons: `DistanceSquared` and `MagnitudeSquared`
+
+When you only need to **compare** lengths or distances, skip the square root:
+
+```csharp
+double d2 = Vector3.DistanceSquared(a, b);   // |a − b|², no Math.Sqrt
+double m2 = velocity.MagnitudeSquared;        // |velocity|²
+```
+
+### Zero test
+
+```csharp
+bool isZero = vector.IsZero();        // exactly (0, 0, 0)
+bool nearZero = vector.IsZero(1e-6);  // magnitude within a tolerance of zero
+```
+
+### Deconstruction and tuple conversion
+
+The type deconstructs into its components and converts implicitly to and from a `(double, double,
+double)` tuple:
+
+```csharp
+var (x, y, z) = velocity;                 // deconstruction
+Vector3 v = (1.0, 2.0, 3.0);              // from a tuple
+(double X, double Y, double Z) t = v;     // to a tuple
 ```
 
 ## Summary

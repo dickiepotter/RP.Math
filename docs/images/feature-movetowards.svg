@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300" viewBox="0 0 500 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="mt-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1a7f37"/></marker>
+  </defs>
+  <rect x="0.5" y="0.5" width="499" height="299" rx="12" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="20" y="30" font-size="16" font-weight="600" fill="#24292f">MoveTowards steps toward a target, never overshooting</text>
+
+  <!-- full path current -> target -->
+  <line x1="90" y1="200" x2="410" y2="110" stroke="#57606a" stroke-width="1.6" stroke-dasharray="6 4"/>
+  <text x="250" y="135" font-size="12" fill="#57606a" transform="rotate(-15 250 135)">distance to target</text>
+
+  <!-- the limited step (result) -->
+  <line x1="90" y1="200" x2="218" y2="164" stroke="#1a7f37" stroke-width="3.5" marker-end="url(#mt-green)"/>
+  <text x="120" y="190" font-size="14" fill="#1a7f37" font-weight="600">result</text>
+  <text x="120" y="208" font-size="12" fill="#1a7f37">(step &#8804; maxDelta)</text>
+
+  <!-- current and target points -->
+  <circle cx="90" cy="200" r="5" fill="#1f6feb"/>
+  <text x="60" y="225" font-size="13" fill="#1f6feb" font-weight="600">A (current)</text>
+  <circle cx="410" cy="110" r="5" fill="#8250df"/>
+  <text x="356" y="100" font-size="13" fill="#8250df" font-weight="600">B (target)</text>
+
+  <text x="20" y="278" font-size="14" fill="#24292f"><tspan font-weight="600">MoveTowards(A, B, maxDelta)</tspan> moves at most maxDelta from A toward B; a larger step lands exactly on B.</text>
+</svg>
