@@ -284,5 +284,79 @@ namespace RP.Math.Tests
         }
 
         #endregion
+
+        #region Offset (arbitrary line) Rotation Tests
+
+        // These cover the RotateX/Y/Z overloads with NON-ZERO offsets, i.e. rotation about a line
+        // parallel to an axis but passing through the offset point (the zero-offset case is already
+        // covered in the main Rotation Tests region).
+
+        [TestMethod, TestCategory("Rotation")]
+        public void RotateX_WithOffsets_ShouldOrbitTheOffsetLine_Test()
+        {
+            // Origin rotated 90° about the line parallel to X through (y=1, z=0).
+            var result = Vector3.RotateX(new Vector3(0, 0, 0), 1, 0, Deg90AsRad);
+
+            Math.Round(result.X, 6).Should().Be(0);
+            Math.Round(result.Y, 6).Should().Be(1);
+            Math.Round(result.Z, 6).Should().Be(-1);
+        }
+
+        [TestMethod, TestCategory("Rotation")]
+        public void RotateY_WithOffsets_ShouldOrbitTheOffsetLine_Test()
+        {
+            // Origin rotated 90° about the line parallel to Y through (x=1, z=0).
+            var result = Vector3.RotateY(new Vector3(0, 0, 0), 1, 0, Deg90AsRad);
+
+            Math.Round(result.X, 6).Should().Be(1);
+            Math.Round(result.Y, 6).Should().Be(0);
+            Math.Round(result.Z, 6).Should().Be(1);
+        }
+
+        [TestMethod, TestCategory("Rotation")]
+        public void RotateZ_WithOffsets_ShouldOrbitTheOffsetLine_Test()
+        {
+            // Origin rotated 90° about the line parallel to Z through (x=1, y=0).
+            var result = Vector3.RotateZ(new Vector3(0, 0, 0), 1, 0, Deg90AsRad);
+
+            Math.Round(result.X, 6).Should().Be(1);
+            Math.Round(result.Y, 6).Should().Be(-1);
+            Math.Round(result.Z, 6).Should().Be(0);
+        }
+
+        [TestMethod, TestCategory("Rotation")]
+        public void RotateX_WhereThePointLiesOnTheOffsetLine_ShouldNotMove_Test()
+        {
+            // (·, 2, 3) lies on the line parallel to X through (y=2, z=3), so it is unchanged.
+            var result = new Vector3(5, 2, 3).RotateX(2, 3, Deg90AsRad);
+
+            Math.Round(result.X, 6).Should().Be(5);
+            Math.Round(result.Y, 6).Should().Be(2);
+            Math.Round(result.Z, 6).Should().Be(3);
+        }
+
+        [TestMethod, TestCategory("Rotation")]
+        public void RotateY_WhereThePointLiesOnTheOffsetLine_ShouldNotMove_Test()
+        {
+            // (5, ·, 3) lies on the line parallel to Y through (x=5, z=3), so it is unchanged.
+            var result = new Vector3(5, 2, 3).RotateY(5, 3, Deg90AsRad);
+
+            Math.Round(result.X, 6).Should().Be(5);
+            Math.Round(result.Y, 6).Should().Be(2);
+            Math.Round(result.Z, 6).Should().Be(3);
+        }
+
+        [TestMethod, TestCategory("Rotation")]
+        public void RotateZ_WhereThePointLiesOnTheOffsetLine_ShouldNotMove_Test()
+        {
+            // (3, 4, ·) lies on the line parallel to Z through (x=3, y=4), so it is unchanged.
+            var result = new Vector3(3, 4, 7).RotateZ(3, 4, Deg90AsRad);
+
+            Math.Round(result.X, 6).Should().Be(3);
+            Math.Round(result.Y, 6).Should().Be(4);
+            Math.Round(result.Z, 6).Should().Be(7);
+        }
+
+        #endregion
     }
 }
