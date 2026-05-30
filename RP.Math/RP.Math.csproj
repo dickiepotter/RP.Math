@@ -14,9 +14,10 @@
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
   </PropertyGroup>
 
+  <!-- Packed into the NuGet package; Visible=false keeps them out of the project tree. -->
   <ItemGroup>
-    <None Include="..\README.md" Pack="true" PackagePath="\" />
-    <None Include="..\LICENSE.txt" Pack="true" PackagePath="\" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\LICENSE.txt" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
 </Project>
