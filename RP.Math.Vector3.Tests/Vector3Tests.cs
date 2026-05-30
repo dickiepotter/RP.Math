@@ -18,7 +18,7 @@
     /// TODO Test the logic of Abs
     [TestClass]
     [SuppressMessage("ReSharper", "InconsistentNaming")]
-    public class Vector3Tests
+    public partial class Vector3Tests
     {
         private const double ArbitaryTestDouble = 109.005;
 

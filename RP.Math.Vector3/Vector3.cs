@@ -826,7 +826,7 @@ namespace RP.Math
         /// </exception>
         public Vector3 Interpolate(Vector3 other, double control, bool allowExtrapolation)
         {
-            return Interpolate(this, other, control);
+            return Interpolate(this, other, control, allowExtrapolation);
         }
 
         #endregion
