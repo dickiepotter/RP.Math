@@ -1,77 +1,59 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{1598D74F-F686-4A63-9F1D-7048FB4C0E30}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Math</RootNamespace>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>Math</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <FileUpgradeFlags>
-    </FileUpgradeFlags>
-    <UpgradeBackupLocation>
-    </UpgradeBackupLocation>
-    <OldToolsVersion>3.5</OldToolsVersion>
+    <RootNamespace>Math</RootNamespace>
+
+    <!-- Assembly metadata migrated from the old Properties\AssemblyInfo.cs (now auto-generated). -->
+    <AssemblyTitle>Math</AssemblyTitle>
+    <Product>Math</Product>
+    <Copyright>Copyright © 2008</Copyright>
+    <Version>1.0.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Xml.Linq">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data.DataSetExtensions">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Angle.cs" />
-    <Compile Include="Axis.cs" />
-    <Compile Include="OrthogonalAxis.cs" />
-    <Compile Include="Shape\Rectangle.cs" />
-    <Compile Include="Graphics\Camera.cs" />
-    <Compile Include="Plane.cs" />
-    <Compile Include="Quaternion.cs" />
-    <Compile Include="Rotation.cs" />
-    <Compile Include="TestStuff\Chord.cs" />
-    <Compile Include="TestStuff\VectorPair.cs" />
-    <Compile Include="TestStuff\LineSegment.cs" />
-    <Compile Include="Matrix.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TestStuff\Ray.cs" />
-    <Compile Include="Vector.cs" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
+
+  <!--
+    Faithful port of the old project's explicit file set. SDK-style projects glob **\*.cs
+    by default, so two sets of files are removed explicitly:
+      - Tests\**  : the Tests project is nested in this folder; its sources belong to Tests.csproj.
+      - TestStuff\Vector.cs : an obsolete duplicate of Vector.cs (same namespace and types);
+                              it was never compiled by the original project.
   -->
+  <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
+    <Compile Remove="TestStuff\Vector.cs" />
+  </ItemGroup>
+
+  <!--
+    Pre-build guard: the canonical, actively-maintained vector type now lives in the Vector
+    subfolder (RP.Math.Vector3\Vector3.cs). This warns at build time if that source has changed
+    since the legacy RP.Math Vector was last reconciled against it, so the divergence is visible.
+    After reconciling, re-baseline by setting ExpectedVector3Hash to the value reported in the warning
+    (or run: (Get-FileHash ..\Vector\RP.Math.Vector3\Vector3.cs -Algorithm SHA256).Hash.ToLower()).
+  -->
+  <Target Name="CheckCanonicalVector3" BeforeTargets="BeforeBuild;CoreCompile">
+    <PropertyGroup>
+      <CanonicalVector3Path>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Vector\RP.Math.Vector3\Vector3.cs'))</CanonicalVector3Path>
+      <!-- SHA256 of Vector3.cs that this library was last checked against. -->
+      <ExpectedVector3Hash>75dde2f25f883719a7ee3d225778deb2364fe71afa1bb921bb1833499c4cef19</ExpectedVector3Hash>
+    </PropertyGroup>
+
+    <Warning Condition="!Exists('$(CanonicalVector3Path)')"
+             Code="RPM001"
+             Text="Canonical Vector3 source not found at '$(CanonicalVector3Path)'; cannot verify the legacy RP.Math Vector is up to date." />
+
+    <GetFileHash Condition="Exists('$(CanonicalVector3Path)')"
+                 Files="$(CanonicalVector3Path)"
+                 Algorithm="SHA256"
+                 HashEncoding="hex">
+      <Output TaskParameter="Hash" PropertyName="ActualVector3Hash" />
+    </GetFileHash>
+
+    <Warning Condition="Exists('$(CanonicalVector3Path)') And '$(ActualVector3Hash.ToLowerInvariant())' != '$(ExpectedVector3Hash)'"
+             Code="RPM002"
+             Text="Canonical Vector3 has changed since RP.Math was last reconciled with it (expected SHA256 $(ExpectedVector3Hash), found $(ActualVector3Hash)). Review whether RP.Math\Vector.cs needs updating, then update &lt;ExpectedVector3Hash&gt; in Math.csproj. Source: $(CanonicalVector3Path)" />
+  </Target>
+
 </Project>

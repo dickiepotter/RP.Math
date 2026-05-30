@@ -30,85 +30,90 @@ namespace RPUtil.Math.Math3D
             )
                 throw new ArgumentException("The vectors provided are not orthogonal.");
 
-            Up = up;
-            Forward = forward;
-            Right = right;
+            _right = right;
+            _up = up;
+            _forward = forward;
         }
 
         public OrthogonalAxis(AxisAlignment x, AxisAlignment y, AxisAlignment z)
         {
-            const Vector vx = new Vector(1, 0, 0);
-            const Vector vMx = new Vector(-1, 0, 0);
+            // The readonly fields must be definitely assigned on every path; the switches below set
+            // exactly one of them per alignment. Seed to default so the compiler is satisfied, and
+            // rely on the orthogonality check at the end to reject incomplete/duplicate alignments.
+            _right = _up = _forward = default(Vector);
+
+            var vx = new Vector(1, 0, 0);
+            var vMx = new Vector(-1, 0, 0);
 
             switch (x)
             {
                 case AxisAlignment.FORWARD:
-                    Forward = vx;
+                    _forward = vx;
                     break;
                 case AxisAlignment.BACKWARD:
-                    Forward = vMx;
+                    _forward = vMx;
                     break;
                 case AxisAlignment.UP:
-                    Up = vx;
+                    _up = vx;
                     break;
                 case AxisAlignment.DOWN:
-                    Up = vMx;
+                    _up = vMx;
                     break;
                 case AxisAlignment.RIGHT:
-                    Right = vx;
+                    _right = vx;
                     break;
                 case AxisAlignment.LEFT:
-                    Right = vMx;
+                    _right = vMx;
                     break;
             }
 
-            const Vector vy = new Vector(0, 1, 0);
-            const Vector vMy = new Vector(0, -1, 0);
+            var vy = new Vector(0, 1, 0);
+            var vMy = new Vector(0, -1, 0);
 
             switch (y)
             {
                 case AxisAlignment.FORWARD:
-                    Forward = vy;
+                    _forward = vy;
                     break;
                 case AxisAlignment.BACKWARD:
-                    Forward = vMy;
+                    _forward = vMy;
                     break;
                 case AxisAlignment.UP:
-                    Up = vy;
+                    _up = vy;
                     break;
                 case AxisAlignment.DOWN:
-                    Up = vMy;
+                    _up = vMy;
                     break;
                 case AxisAlignment.RIGHT:
-                    Right = vy;
+                    _right = vy;
                     break;
                 case AxisAlignment.LEFT:
-                    Right = vMy;
+                    _right = vMy;
                     break;
             }
 
-            const Vector vz = new Vector(0, 0, 1);
-            const Vector vMz = new Vector(0, 0, -1);
+            var vz = new Vector(0, 0, 1);
+            var vMz = new Vector(0, 0, -1);
 
             switch (z)
             {
                 case AxisAlignment.FORWARD:
-                    Forward = vz;
+                    _forward = vz;
                     break;
                 case AxisAlignment.BACKWARD:
-                    Forward = vMz;
+                    _forward = vMz;
                     break;
                 case AxisAlignment.UP:
-                    Up = vz;
+                    _up = vz;
                     break;
                 case AxisAlignment.DOWN:
-                    Up = vMz;
+                    _up = vMz;
                     break;
                 case AxisAlignment.RIGHT:
-                    Right = vz;
+                    _right = vz;
                     break;
                 case AxisAlignment.LEFT:
-                    Right = vMz;
+                    _right = vMz;
                     break;
             }
 
@@ -123,39 +128,39 @@ namespace RPUtil.Math.Math3D
 
         public OrthogonalAxis Yaw(Angle a1) { return Yaw(this, a1); }
         public OrthogonalAxis Pitch(Angle a1) { return Pitch(this, a1); }
-        public OrthogonalAxis Roll(Angle a1) { return Yaw(Roll, a1); }
+        public OrthogonalAxis Roll(Angle a1) { return Roll(this, a1); }
         public OrthogonalAxis Rotate(Attitude attitude) { return Rotate(this, attitude); }
 
-        public static OrthogonalAxis Yaw(OrthogonalAxis axis, Angle a1) 
+        // NOTE: The four rotation helpers below were never finished in the original source and are
+        // left as flagged gaps rather than guessed implementations:
+        //   * Vector.Yaw/Pitch/Roll require an (Angle, Axis) pair, but an OrthogonalAxis carries no
+        //     Axis convention to supply, so the intended per-basis rotation is undetermined.
+        //   * Vector.Rotate takes a Rotation (X/Y/Z angles); these receive an Attitude (yaw/pitch/roll),
+        //     and the Attitude->Rotation mapping depends on an Axis convention the type does not define.
+        // They throw so the gap is explicit instead of silently incorrect.
+
+        public static OrthogonalAxis Yaw(OrthogonalAxis axis, Angle a1)
         {
-            Vector vu = axis.Up.Yaw(al);
-            Vector vf = axis.Forward.Yaw(al);
-            Vector vr = axis.Right.Yaw(al);
-            return new OrthogonalAxis(vr, vu, vf);
+            throw new NotImplementedException(
+                "OrthogonalAxis.Yaw was incomplete in the original source: Vector.Yaw needs an Axis argument that this type does not define.");
         }
 
-        public static OrthogonalAxis Pitch(OrthogonalAxis axis, Angle a1) 
+        public static OrthogonalAxis Pitch(OrthogonalAxis axis, Angle a1)
         {
-            Vector vu = axis.Up.Yaw(al);
-            Vector vf = axis.Forward.Yaw(al);
-            Vector vr = axis.Right.Yaw(al);
-            return new OrthogonalAxis(vr, vu, vf);
+            throw new NotImplementedException(
+                "OrthogonalAxis.Pitch was incomplete in the original source: Vector.Pitch needs an Axis argument that this type does not define.");
         }
 
-        public static OrthogonalAxis Roll(OrthogonalAxis axis, Angle a1) 
+        public static OrthogonalAxis Roll(OrthogonalAxis axis, Angle a1)
         {
-            Vector vu = axis.Up.Yaw(al);
-            Vector vf = axis.Forward.Yaw(al);
-            Vector vr = axis.Right.Yaw(al);
-            return new OrthogonalAxis(vr, vu, vf);
+            throw new NotImplementedException(
+                "OrthogonalAxis.Roll was incomplete in the original source: Vector.Roll needs an Axis argument that this type does not define.");
         }
 
         public static OrthogonalAxis Rotate(OrthogonalAxis axis, Attitude attitude)
         {
-            Vector vu = axis.Up.Rotate(attitude);
-            Vector vf = axis.Forward.Rotate(attitude);
-            Vector vr = axis.Right.Rotate(attitude);
-            return new OrthogonalAxis(vr, vu, vf);
+            throw new NotImplementedException(
+                "OrthogonalAxis.Rotate was incomplete in the original source: converting an Attitude (yaw/pitch/roll) to the Rotation (X/Y/Z) that Vector.Rotate expects requires an Axis convention this type does not define.");
         }
 
         #region Static
@@ -217,6 +222,14 @@ namespace RPUtil.Math.Math3D
         UP = 4,
         DOWN = 5,
         RIGHT = 6,
-        LEFT = 7
+        LEFT = 7,
+
+        // Depth-axis aliases referenced by Axis.cs. Mapped per this enum's own comment
+        // ("0010(NEAR) => 0011(FAR)"): NEAR == FORWARD (2), FAR == BACKWARD (3).
+        // FLAG: under this mapping Axis.Map treats FAR as non-inverted and NEAR as inverted, the
+        // reverse of the UP/RIGHT (non-inverted) vs DOWN/LEFT (inverted) pattern. The NEAR/FAR vs
+        // FORWARD/BACKWARD naming was evidently mid-rename; confirm the intended convention.
+        NEAR = FORWARD,
+        FAR = BACKWARD
     }
 }
