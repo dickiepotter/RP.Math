@@ -2,7 +2,6 @@ namespace RP.Math
 {
     using System;
     using System.Collections.Generic;
-    using System.Runtime.InteropServices.WindowsRuntime;
 
     /// <summary>
     /// Representation of a double expanded into its component parts.

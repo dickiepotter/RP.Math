@@ -247,7 +247,7 @@ namespace RP.Math.Tests
             double d = 75.5;
             var result = new ExpandedDouble(d);
 
-            result.ExponentBitsAsStored.Should().BeEquivalentTo(1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1);
+            result.ExponentBitsAsStored.Should().BeEquivalentTo(new[] { 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1 });
         }
 
         #endregion
@@ -279,7 +279,7 @@ namespace RP.Math.Tests
             var result = new ExpandedDouble(d);
 
             result.MantissaBitsAsStored.Should()
-                .BeEquivalentTo(0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                .BeEquivalentTo(new[] { 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
         }
 
         #endregion

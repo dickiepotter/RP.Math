@@ -834,7 +834,7 @@
             var vector = new Vector3(0, 0, 0);
             Action action = () => vector.Normalize();
 
-            action.ShouldThrow<NormalizeVectorException>();
+            action.Should().Throw<NormalizeVectorException>();
         }
 
         [TestMethod, TestCategory("Normalize")]
@@ -852,7 +852,7 @@
             var vector = new Vector3(-0, -0, -0);
             Action action = () => vector.Normalize();
 
-            action.ShouldThrow<NormalizeVectorException>();
+            action.Should().Throw<NormalizeVectorException>();
         }
 
         [TestMethod, TestCategory("Normalize")]
@@ -870,7 +870,7 @@
             var vector = new Vector3(-0, +0, -0);
             Action action = () => vector.Normalize();
 
-            action.ShouldThrow<NormalizeVectorException>();
+            action.Should().Throw<NormalizeVectorException>();
         }
 
         [TestMethod, TestCategory("Normalize")]
@@ -954,7 +954,7 @@
             var vector = new Vector3(double.PositiveInfinity, 3, 6);
             Action action = () => vector.Normalize();
 
-            action.ShouldThrow<NormalizeVectorException>();
+            action.Should().Throw<NormalizeVectorException>();
         }
 
         [TestMethod, TestCategory("Normalize")]
@@ -985,7 +985,7 @@
             var vector = new Vector3(double.NegativeInfinity, 3, 6);
             Action action = () => vector.Normalize();
 
-            action.ShouldThrow<NormalizeVectorException>();
+            action.Should().Throw<NormalizeVectorException>();
         }
 
         [TestMethod, TestCategory("Normalize")]
@@ -1042,7 +1042,7 @@
 
             Action act = () => vector.Normalize();
 
-            act.ShouldThrow<NormalizeVectorException>("you should not be able to normalize NaN values");
+            act.Should().Throw<NormalizeVectorException>("you should not be able to normalize NaN values");
         }
 
         [TestMethod, TestCategory("Normalize")]
