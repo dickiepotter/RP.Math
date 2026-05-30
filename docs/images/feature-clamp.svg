@@ -23,5 +23,5 @@
   <line x1="250" y1="73" x2="322" y2="92" stroke="#1f6feb" stroke-width="1"/>
   <text x="200" y="70" font-size="13" fill="#1f6feb" font-weight="600">clamped</text>
 
-  <text x="20" y="278" font-size="14" fill="#24292f"><tspan font-weight="600">Clamp(value, min, max)</tspan> clamps x, y and z independently &#8212; a component-wise box constraint.</text>
+  <text x="20" y="278" font-size="13" fill="#24292f"><tspan font-weight="600">Clamp(value, min, max)</tspan> clamps x, y, z independently into [min, max].</text>
 </svg>

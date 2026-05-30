@@ -1415,15 +1415,30 @@ var next = position.MoveTowards(target, 3);   // (3, 0, 0)
 
 ### Component-wise Min, Max and Clamp
 
-`ComponentMin` / `ComponentMax` / `Clamp` work on each axis **independently**. (This is deliberately
-distinct from `Min` / `Max`, which compare whole vectors by *magnitude* and return the shorter or
-longer one.)
+These work on **each axis independently** — the X of the result depends only on the Xs of the
+inputs, the Y only on the Ys, and the Z only on the Zs.
+
+`ComponentMin` takes the smaller value on every axis and `ComponentMax` the larger, so together they
+give the two opposite corners of the **axis-aligned bounding box** that just contains the two input
+points:
+
+![Component-wise min and max are the corners of the bounding box of A and B](docs/images/feature-componentminmax.svg)
+
+```csharp
+var lo = new Vector3(1, 5, 3).ComponentMin(new Vector3(4, 2, 6)); // (1, 2, 3) — smaller of each axis
+var hi = new Vector3(1, 5, 3).ComponentMax(new Vector3(4, 2, 6)); // (4, 5, 6) — larger of each axis
+```
+
+> **Not the same as `Min` / `Max`.** Those compare whole vectors by *magnitude* (length) and return
+> the shorter or longer one unchanged — they never mix components. Use `ComponentMin` / `ComponentMax`
+> when you want a per-axis result.
+
+`Clamp` is the same idea applied to a range: it pushes each component of a vector into the
+`[min, max]` interval for that axis.
 
 ![Clamp constrains each component into a box](docs/images/feature-clamp.svg)
 
 ```csharp
-var lo = new Vector3(1, 5, 3).ComponentMin(new Vector3(4, 2, 6));            // (1, 2, 3)
-var hi = new Vector3(1, 5, 3).ComponentMax(new Vector3(4, 2, 6));            // (4, 5, 6)
 var inBox = new Vector3(5, -5, 2).Clamp(Vector3.Origin, new Vector3(3, 3, 3)); // (3, 0, 2)
 ```
 

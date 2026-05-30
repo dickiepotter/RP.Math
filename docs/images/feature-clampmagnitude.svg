@@ -21,5 +21,5 @@
   <line x1="120" y1="215" x2="226" y2="141" stroke="#1a7f37" stroke-width="3.5" marker-end="url(#cm-green)"/>
   <text x="80" y="120" font-size="14" fill="#1a7f37" font-weight="600">result (length = max)</text>
 
-  <text x="20" y="280" font-size="14" fill="#24292f"><tspan font-weight="600">ClampMagnitude(v, max)</tspan> = v when |v| &#8804; max, otherwise v scaled to length max.</text>
+  <text x="20" y="280" font-size="13" fill="#24292f"><tspan font-weight="600">ClampMagnitude(v, max)</tspan> caps |v| at max, keeping direction.</text>
 </svg>

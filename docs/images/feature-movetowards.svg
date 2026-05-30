@@ -11,8 +11,8 @@
 
   <!-- the limited step (result) -->
   <line x1="90" y1="200" x2="218" y2="164" stroke="#1a7f37" stroke-width="3.5" marker-end="url(#mt-green)"/>
-  <text x="120" y="190" font-size="14" fill="#1a7f37" font-weight="600">result</text>
-  <text x="120" y="208" font-size="12" fill="#1a7f37">(step &#8804; maxDelta)</text>
+  <text x="112" y="132" font-size="14" fill="#1a7f37" font-weight="600">result</text>
+  <text x="112" y="148" font-size="12" fill="#1a7f37">(step &#8804; maxDelta)</text>
 
   <!-- current and target points -->
   <circle cx="90" cy="200" r="5" fill="#1f6feb"/>
@@ -20,5 +20,5 @@
   <circle cx="410" cy="110" r="5" fill="#8250df"/>
   <text x="356" y="100" font-size="13" fill="#8250df" font-weight="600">B (target)</text>
 
-  <text x="20" y="278" font-size="14" fill="#24292f"><tspan font-weight="600">MoveTowards(A, B, maxDelta)</tspan> moves at most maxDelta from A toward B; a larger step lands exactly on B.</text>
+  <text x="20" y="278" font-size="13" fill="#24292f"><tspan font-weight="600">MoveTowards(A, B, maxDelta)</tspan> steps at most maxDelta toward B.</text>
 </svg>

@@ -37,5 +37,5 @@
   <text x="212" y="160" font-size="12" fill="#57606a">&#952;</text>
   <text x="280" y="160" font-size="12" fill="#57606a">&#952;</text>
 
-  <text x="20" y="275" font-size="14" fill="#24292f"><tspan font-weight="600">r = v &#8722; 2 (v &#183; n&#770;) n&#770;</tspan>  &#8212; the component along the normal is reversed (angle in = angle out).</text>
+  <text x="20" y="278" font-size="13" fill="#24292f"><tspan font-weight="600">r = v &#8722; 2 (v &#183; n&#770;) n&#770;</tspan>   (angle in = angle out)</text>
 </svg>
