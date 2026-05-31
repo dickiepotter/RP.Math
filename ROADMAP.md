@@ -218,10 +218,12 @@ both contracts — build it alongside the first shape.
   `ToString`, deconstruction, constants, 20 tests). Line intersection is expressed parametrically
   `(point, direction)` so `Ray`/`LineSegment` can delegate once built out.
 - Raise `Axis`, `Matrix`, `Angle` test coverage toward `Vector` level.
-- Enhancement (deliberate divergence from upstream Vector repo): add `Angle`-typed `Yaw`/`Pitch`/`Roll`
-  overloads to `Vector` so it speaks the `Angle` vocabulary directly (today an `Angle` implicitly
-  converts to the `double rad` parameter). Confirmed no such overloads were lost in the rename —
-  current `Vector.cs` matches the upstream `Vector3.cs` public API exactly.
+- Enhancement ✅ done (deliberate divergence from upstream Vector repo): added `Angle`-typed
+  `Yaw`/`Pitch`/`Roll` and `RotateX`/`RotateY`/`RotateZ` overloads (static + instance) to `Vector`, so it
+  speaks the `Angle` vocabulary directly instead of relying on the implicit `Angle`→`double` conversion.
+  Overload resolution is unambiguous (a `double`/`int` still binds to the radian form); 12 tests.
+  Confirmed no such overloads were lost in the rename — current `Vector.cs` matched the upstream
+  `Vector3.cs` public API exactly; this genuinely extends it.
 
 **Phase 2 — Geometry shapes (headline goal)**
 - Add **`Box`** (axis-aligned bounds) — the `BoundingBox` return type.
