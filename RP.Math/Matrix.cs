@@ -662,6 +662,72 @@ namespace RP.Math
 
         #endregion
 
+        #region Conversion to a quaternion
+
+        /// <summary>
+        /// The unit <see cref="Quaternion"/> describing the rotation in this matrix's upper-left 3x3 block —
+        /// the inverse of <see cref="Quaternion.ToMatrix"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Maths: the standard trace-based extraction. For a rotation matrix the diagonal sum (the trace)
+        /// equals <c>4w² − 1</c>, so when the trace is positive <c>w</c> is large and we recover it first,
+        /// then read <c>x, y, z</c> from the off-diagonal differences. When the trace is small (a rotation
+        /// near 180°) that path loses precision, so we instead pivot on whichever diagonal entry is
+        /// largest — guaranteeing the divisor is well away from zero.
+        /// </para>
+        /// <para>
+        /// Assumes the 3x3 block is a pure rotation (orthonormal); any scale or skew is not accounted for.
+        /// The result is normalized.
+        /// </para>
+        /// </remarks>
+        public Quaternion ToQuaternion()
+        {
+            double m00 = A1_1, m01 = A1_2, m02 = A1_3;
+            double m10 = A2_1, m11 = A2_2, m12 = A2_3;
+            double m20 = A3_1, m21 = A3_2, m22 = A3_3;
+
+            double trace = m00 + m11 + m22;
+            double x, y, z, w;
+
+            if (trace > 0)
+            {
+                double s = 0.5 / System.Math.Sqrt(trace + 1.0);
+                w = 0.25 / s;
+                x = (m21 - m12) * s;
+                y = (m02 - m20) * s;
+                z = (m10 - m01) * s;
+            }
+            else if (m00 > m11 && m00 > m22)
+            {
+                double s = 2.0 * System.Math.Sqrt(1.0 + m00 - m11 - m22);
+                w = (m21 - m12) / s;
+                x = 0.25 * s;
+                y = (m01 + m10) / s;
+                z = (m02 + m20) / s;
+            }
+            else if (m11 > m22)
+            {
+                double s = 2.0 * System.Math.Sqrt(1.0 + m11 - m00 - m22);
+                w = (m02 - m20) / s;
+                x = (m01 + m10) / s;
+                y = 0.25 * s;
+                z = (m12 + m21) / s;
+            }
+            else
+            {
+                double s = 2.0 * System.Math.Sqrt(1.0 + m22 - m00 - m11);
+                w = (m10 - m01) / s;
+                x = (m02 + m20) / s;
+                y = (m12 + m21) / s;
+                z = 0.25 * s;
+            }
+
+            return new Quaternion(x, y, z, w).NormalizeOrDefault();
+        }
+
+        #endregion
+
         #region Functions
 
         public double Determinant

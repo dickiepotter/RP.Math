@@ -1,7 +1,5 @@
 namespace RP.Math
 {
-    using System;
-
     /// <summary>
     /// A ray: a half-line that starts at an <see cref="Origin"/> point and travels forever in one
     /// <see cref="Direction"/>.
@@ -100,6 +98,16 @@ namespace RP.Math
         public double DistanceTo(Vector point)
         {
             return ClosestPointTo(point).Distance(point);
+        }
+
+        #endregion
+
+        #region Conversions to other line types
+
+        /// <summary>The infinite <see cref="Line"/> this ray lies on (same origin and direction, but extended both ways).</summary>
+        public Line ToLine()
+        {
+            return new Line(Origin, Direction);
         }
 
         #endregion

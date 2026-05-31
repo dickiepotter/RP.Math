@@ -324,6 +324,12 @@ namespace RP.Math
             return new Quaternion(unit.X * s, unit.Y * s, unit.Z * s, Math.Cos(half));
         }
 
+        /// <summary>Create a unit quaternion from an <see cref="AxisAngle"/> rotation.</summary>
+        public static Quaternion FromAxisAngle(AxisAngle axisAngle)
+        {
+            return FromAxisAngle(axisAngle.Axis, axisAngle.Angle);
+        }
+
         /// <summary>
         /// Decompose this (assumed unit) quaternion into the axis and angle it represents.
         /// </summary>

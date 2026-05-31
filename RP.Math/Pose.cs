@@ -46,6 +46,12 @@ namespace RP.Math
         {
         }
 
+        /// <summary>Construct a pose from a position and an <see cref="AxisAngle"/> rotation.</summary>
+        public Pose(Vector position, AxisAngle rotation)
+            : this(position, rotation.ToQuaternion())
+        {
+        }
+
         /// <summary>Construct a pose at a position with no rotation.</summary>
         public Pose(Vector position)
             : this(position, Quaternion.Identity)

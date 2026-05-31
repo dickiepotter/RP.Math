@@ -109,6 +109,72 @@ namespace RP.Math
 
         #endregion
 
+        #region Intersection with a line or ray
+
+        /// <summary>
+        /// Intersect the sphere with an infinite <see cref="Line"/>. Returns true and the two surface
+        /// crossing points (<paramref name="near"/> and <paramref name="far"/>, equal when the line grazes
+        /// the sphere); false when the line misses entirely.
+        /// </summary>
+        /// <remarks>
+        /// Maths: substitute the line <c>P + t·D</c> into <c>|X − C|² = r²</c>. With unit direction
+        /// <c>D</c> this is a quadratic in <c>t</c> whose discriminant is <c>b² − c</c> for
+        /// <c>b = (P − C)·D</c> and <c>c = |P − C|² − r²</c>; a negative discriminant means no real crossing.
+        /// </remarks>
+        public bool TryIntersect(Line line, out Vector near, out Vector far)
+        {
+            Vector m = line.Point - this.center;
+            double b = m.DotProduct(line.Direction);
+            double c = m.MagnitudeSquared - (this.radius * this.radius);
+            double disc = (b * b) - c;
+            if (disc < 0)
+            {
+                near = far = line.Point;
+                return false;
+            }
+
+            double s = Math.Sqrt(disc);
+            near = line.PointAt(-b - s);
+            far = line.PointAt(-b + s);
+            return true;
+        }
+
+        /// <summary>
+        /// Intersect the sphere with a <see cref="Ray"/>. Returns true and the nearest surface point at or
+        /// ahead of the ray's origin (if the origin is inside the sphere, the forward exit point); false
+        /// when the sphere is missed or lies entirely behind the ray.
+        /// </summary>
+        public bool TryIntersect(Ray ray, out Vector point)
+        {
+            Vector m = ray.Origin - this.center;
+            double b = m.DotProduct(ray.Direction);
+            double c = m.MagnitudeSquared - (this.radius * this.radius);
+            double disc = (b * b) - c;
+            if (disc < 0)
+            {
+                point = ray.Origin;
+                return false;
+            }
+
+            double s = Math.Sqrt(disc);
+            double t = -b - s;
+            if (t < 0)
+            {
+                t = -b + s; // origin is inside the sphere: take the forward exit point
+            }
+
+            if (t < 0)
+            {
+                point = ray.Origin; // the sphere is behind the ray
+                return false;
+            }
+
+            point = ray.PointAt(t);
+            return true;
+        }
+
+        #endregion
+
         #region Transformation (returns a new sphere)
 
         /// <summary>A copy of the sphere translated by <paramref name="offset"/>.</summary>

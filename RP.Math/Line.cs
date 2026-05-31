@@ -251,6 +251,19 @@ namespace RP.Math
 
         #endregion
 
+        #region Conversions to other line types
+
+        /// <summary>
+        /// A <see cref="Ray"/> starting at this line's <see cref="Point"/> and travelling along its
+        /// <see cref="Direction"/> — the forward half of the line.
+        /// </summary>
+        public Ray ToRay()
+        {
+            return new Ray(Point, Direction);
+        }
+
+        #endregion
+
         #region ToString
 
         /// <summary>A string of the form <c>point + t(direction)</c>, echoing the line's equation.</summary>

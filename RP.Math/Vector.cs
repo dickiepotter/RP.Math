@@ -1578,6 +1578,47 @@ namespace RP.Math
 
         #endregion
 
+        #region Interop with other library types
+
+        // These let a Vector be the subject of an operation, not just an argument: v.Rotate(q) reads as
+        // naturally as q.Rotate(v). Each delegates to the maths already defined on the partner type.
+
+        /// <summary>Rotate this vector by a <see cref="Quaternion"/>.</summary>
+        public Vector Rotate(Quaternion rotation) => rotation.Rotate(this);
+
+        /// <summary>Rotate this vector by an <see cref="AxisAngle"/>.</summary>
+        public Vector Rotate(AxisAngle rotation) => rotation.Rotate(this);
+
+        /// <summary>Rotate this vector by a <see cref="Rotation"/> (Euler X/Y/Z).</summary>
+        public Vector Rotate(Rotation rotation) => rotation.Rotate(this);
+
+        /// <summary>Rotate this vector by an <see cref="Attitude"/> (yaw/pitch/roll).</summary>
+        public Vector Rotate(Attitude attitude) => attitude.Rotate(this);
+
+        /// <summary>
+        /// Transform this vector (as a point) by a 4x4 <see cref="Matrix"/>, i.e. <c>matrix * this</c>.
+        /// The multiplication treats the vector as a homogeneous point, so a translation column is applied.
+        /// </summary>
+        public Vector Transform(Matrix matrix) => matrix * this;
+
+        /// <summary>
+        /// Transform this vector (as a point) by a <see cref="Pose"/>: rotate by the pose's orientation,
+        /// then translate by its position. Equivalent to <see cref="Pose.Apply(Vector)"/>.
+        /// </summary>
+        public Vector Transform(Pose pose) => pose.Apply(this);
+
+        /// <summary>
+        /// The unsigned angle between this vector and <paramref name="other"/>, as an
+        /// <see cref="RP.Math.Angle"/>. The richer-typed companion to the <c>double</c>-returning
+        /// <see cref="Angle(Vector)"/> method.
+        /// </summary>
+        public Angle AngleTo(Vector other) => new Angle(Vector.Angle(this, other));
+
+        /// <summary>The unsigned angle between two vectors, as an <see cref="RP.Math.Angle"/>.</summary>
+        public static Angle AngleBetween(Vector v1, Vector v2) => new Angle(Vector.Angle(v1, v2));
+
+        #endregion
+
         #endregion
 
         #region Abs Operations

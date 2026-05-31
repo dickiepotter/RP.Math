@@ -120,6 +120,42 @@ namespace RP.Math
 
         #endregion
 
+        #region Intersection with a line or ray
+
+        /// <summary>
+        /// Intersect the disc with an infinite <see cref="Line"/>. Returns true and the meeting point when
+        /// the line crosses the disc; false when the line crosses the plane outside the radius or runs
+        /// parallel to the plane.
+        /// </summary>
+        /// <remarks>Treats the circle as a filled disc: it intersects the line with the disc's supporting
+        /// <see cref="Plane"/>, then keeps the hit only if it falls within the radius. A line lying within
+        /// the plane is parallel to it and is reported as no intersection.</remarks>
+        public bool TryIntersect(Line line, out Vector point)
+        {
+            if (!this.Plane.TryIntersect(line, out point))
+            {
+                return false;
+            }
+
+            return (point - this.center).MagnitudeSquared <= this.radius * this.radius;
+        }
+
+        /// <summary>
+        /// Intersect the disc with a <see cref="Ray"/>. As <see cref="TryIntersect(Line, out Vector)"/>,
+        /// but the hit must lie at or ahead of the ray's origin.
+        /// </summary>
+        public bool TryIntersect(Ray ray, out Vector point)
+        {
+            if (!this.Plane.TryIntersect(ray, out point))
+            {
+                return false;
+            }
+
+            return (point - this.center).MagnitudeSquared <= this.radius * this.radius;
+        }
+
+        #endregion
+
         #region Transformation (returns a new circle)
 
         /// <summary>A copy of the circle translated by <paramref name="offset"/>.</summary>

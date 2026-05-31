@@ -166,6 +166,15 @@ namespace RP.Math
             return new Line(Tail, Head - Tail);
         }
 
+        /// <summary>
+        /// A <see cref="Ray"/> from this segment's <see cref="Tail"/> towards its <see cref="Head"/>,
+        /// extended forever past the head.
+        /// </summary>
+        public Ray ToRay()
+        {
+            return new Ray(Tail, Head - Tail);
+        }
+
         #endregion
 
         #region Producing new segments
