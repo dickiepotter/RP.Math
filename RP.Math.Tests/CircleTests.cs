@@ -64,15 +64,6 @@ namespace RP.Math.Tests
             c.Plane.UnitNormal.Equals(new Vector(0, 1, 0), Tol).Should().BeTrue();
         }
 
-        [TestMethod, TestCategory("BoundingBox")]
-        public void BoundingBox_OfXYCircle_ShouldBeFlatInZ_Test()
-        {
-            var c = Circle.InXYPlane(new Vector(0, 0, 0), 5);
-            var bb = c.BoundingBox;
-            bb.Min.Equals(new Vector(-5, -5, 0), Tol).Should().BeTrue();
-            bb.Max.Equals(new Vector(5, 5, 0), Tol).Should().BeTrue();
-        }
-
         [TestMethod, TestCategory("Query")]
         public void ClosestPoint_OutsidePoint_ShouldClampToRim_Test()
         {
@@ -82,9 +73,9 @@ namespace RP.Math.Tests
         }
 
         [TestMethod, TestCategory("Shape")]
-        public void AsPlanarShape_ShouldExposeCentroidAndNormal_Test()
+        public void ShouldExposeCentroidAndNormal_Test()
         {
-            IPlanarShape s = Circle.InXYPlane(new Vector(1, 2, 0), 3);
+            var s = Circle.InXYPlane(new Vector(1, 2, 0), 3);
             s.Centroid.Should().Be(new Vector(1, 2, 0));
             s.Normal.Equals(new Vector(0, 0, 1), Tol).Should().BeTrue();
         }

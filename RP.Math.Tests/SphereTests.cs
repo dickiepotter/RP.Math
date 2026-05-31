@@ -36,15 +36,6 @@ namespace RP.Math.Tests
             s.Contains(new Vector(5, 5, 5)).Should().BeFalse();
         }
 
-        [TestMethod, TestCategory("BoundingBox")]
-        public void BoundingBox_ShouldBeTheCubeAroundTheSphere_Test()
-        {
-            var s = new Sphere(new Vector(1, 2, 3), 2);
-            var bb = s.BoundingBox;
-            bb.Min.Equals(new Vector(-1, 0, 1), Tol).Should().BeTrue();
-            bb.Max.Equals(new Vector(3, 4, 5), Tol).Should().BeTrue();
-        }
-
         [TestMethod, TestCategory("Query")]
         public void ClosestSurfacePoint_ShouldLandOnTheSurface_Test()
         {
@@ -75,7 +66,7 @@ namespace RP.Math.Tests
         public void Centroid_ShouldBeTheCentre_Test()
         {
             var s = new Sphere(new Vector(1, 2, 3), 4);
-            ((ISolidShape)s).Centroid.Should().Be(new Vector(1, 2, 3));
+            s.Centroid.Should().Be(new Vector(1, 2, 3));
         }
     }
 }

@@ -1,6 +1,6 @@
 namespace RP.Math
 {
-    using System;
+    using Math = System.Math;
 
     /// <summary>
     /// An infinite straight line in 3D space: a <see cref="Point"/> the line passes through, and a
@@ -141,6 +141,112 @@ namespace RP.Math
         public bool IsParallelTo(Line other, double tolerance)
         {
             return Direction.CrossProduct(other.Direction).Magnitude <= tolerance;
+        }
+
+        /// <summary>
+        /// The point on this line nearest to <paramref name="other"/> (the foot of the shortest bridge
+        /// between the two lines, measured on this line).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Maths: write the two lines as <c>P + t·u</c> (this) and <c>Q + s·v</c> (other), with unit
+        /// directions <c>u</c>, <c>v</c>. The shortest connecting segment is perpendicular to <b>both</b>
+        /// lines. Let <c>r = P − Q</c>, <c>b = u · v</c>, <c>d = u · r</c>, <c>e = v · r</c>. Imposing the
+        /// two perpendicularity conditions and using <c>u · u = v · v = 1</c> gives
+        /// </para>
+        /// <para><c>t = (b·e − d) / (1 − b²)</c></para>
+        /// <para>
+        /// and the nearest point is <c>PointAt(t)</c>. The denominator <c>1 − b²</c> is zero exactly when
+        /// the lines are parallel (<c>b = ±1</c>); there is then no unique nearest point, so this returns
+        /// the line's own anchor <see cref="Point"/> as a representative.
+        /// </para>
+        /// </remarks>
+        public Vector ClosestPointTo(Line other)
+        {
+            Vector u = Direction;
+            Vector v = other.Direction;
+            Vector r = Point - other.Point;
+
+            double b = u.DotProduct(v);
+            double denominator = 1.0 - (b * b); // u·u = v·v = 1 because the directions are unit length
+            if (denominator <= double.Epsilon)
+            {
+                return Point; // parallel: every point is equally near, so return the anchor
+            }
+
+            double d = u.DotProduct(r);
+            double e = v.DotProduct(r);
+            double t = ((b * e) - d) / denominator;
+            return PointAt(t);
+        }
+
+        /// <summary>
+        /// The shortest distance between this line and <paramref name="other"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Maths: for two lines with directions <c>u</c> and <c>v</c>, the vector <c>u × v</c> is
+        /// perpendicular to both, so the gap between the lines is the length of <c>r = Q − P</c> measured
+        /// along that common perpendicular:
+        /// </para>
+        /// <para><c>distance = |r · (u × v)| / |u × v|</c></para>
+        /// <para>
+        /// When the lines are parallel, <c>u × v</c> is zero and this is undefined; the distance is then
+        /// just the perpendicular distance from any point of the other line to this one.
+        /// </para>
+        /// </remarks>
+        public double DistanceTo(Line other)
+        {
+            Vector cross = Direction.CrossProduct(other.Direction);
+            double crossMagnitude = cross.Magnitude;
+            if (crossMagnitude <= double.Epsilon)
+            {
+                return DistanceTo(other.Point); // parallel
+            }
+
+            Vector r = other.Point - Point;
+            return Math.Abs(r.DotProduct(cross)) / crossMagnitude;
+        }
+
+        /// <summary>
+        /// Whether this line meets <paramref name="other"/> at a single point within
+        /// <paramref name="tolerance"/>, returning that point.
+        /// </summary>
+        /// <remarks>
+        /// Maths: in 3D two lines usually pass without touching (they are skew). They cross only when the
+        /// shortest distance between them is zero. This rejects parallel lines (no single crossing point),
+        /// then checks whether the nearest points on the two lines coincide to within
+        /// <paramref name="tolerance"/>; if so, that shared point is the intersection.
+        /// </remarks>
+        public bool TryIntersect(Line other, double tolerance, out Vector intersection)
+        {
+            if (IsParallelTo(other, tolerance))
+            {
+                intersection = Point;
+                return false;
+            }
+
+            Vector here = ClosestPointTo(other);
+            Vector there = other.ClosestPointTo(this);
+            intersection = here;
+            return here.Distance(there) <= tolerance;
+        }
+
+        #endregion
+
+        #region Relationship with a plane
+
+        /// <summary>
+        /// Intersect this line with <paramref name="plane"/>. Returns true and the meeting point when they
+        /// cross; false (with <paramref name="intersection"/> = this line's <see cref="Point"/>) when the
+        /// line runs parallel to the plane.
+        /// </summary>
+        /// <remarks>The maths lives on <see cref="Plane"/>; this forwards to
+        /// <see cref="Plane.TryIntersect(Line, out Vector)"/> so the relationship reads naturally from
+        /// either side.</remarks>
+        public bool TryIntersect(Plane plane, out Vector intersection)
+        {
+            return plane.TryIntersect(this, out intersection);
         }
 
         #endregion

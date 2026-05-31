@@ -865,7 +865,7 @@ A small amount of plumbing supports the maths above and is not usually called di
   thrown by the strict `Normalize` methods when asked to normalise a zero-length value (the
   `…OrDefault` variants avoid these).
 
-> The `Shape` namespace (`Circle`, `Sphere`, `Rectangle`, `BoundingBox`, `IShape`) is intentionally
+> The `Shape` namespace (`Circle`, `Sphere`, `Rectangle`) is intentionally
 > **not** documented here — that part of the library is still being worked out.
 
 ---

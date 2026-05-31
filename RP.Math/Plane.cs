@@ -238,6 +238,75 @@ namespace RP.Math
             return -(this.Normal.DotProduct(linePoint) + this.d) / denominator;
         }
 
+        /// <summary>
+        /// Intersect this plane with an infinite <see cref="Line"/>. Returns true and the meeting point
+        /// when they cross; false (with <paramref name="intersection"/> = the line's anchor point) when
+        /// the line is parallel to the plane.
+        /// </summary>
+        /// <remarks>A line is endless, so it meets the plane unless it runs parallel to it — this just
+        /// forwards to <see cref="TryIntersectLine(Vector, Vector, out Vector)"/>.</remarks>
+        public bool TryIntersect(Line line, out Vector intersection)
+        {
+            return this.TryIntersectLine(line.Point, line.Direction, out intersection);
+        }
+
+        /// <summary>
+        /// Intersect this plane with a <see cref="Ray"/>. Returns true and the meeting point only when the
+        /// ray crosses the plane at or ahead of its origin; false (with <paramref name="intersection"/> =
+        /// the ray's origin) when the crossing lies behind the origin or the ray is parallel to the plane.
+        /// </summary>
+        /// <remarks>
+        /// Maths: find the crossing parameter <c>t</c> on the ray's line. Because the ray's direction is
+        /// unit length, <c>t</c> is the signed distance from the origin; a ray only goes forwards, so a
+        /// negative <c>t</c> is a hit on the line but not on the ray.
+        /// </remarks>
+        public bool TryIntersect(Ray ray, out Vector intersection)
+        {
+            double t = this.IntersectLineParameter(ray.Origin, ray.Direction);
+            if (double.IsNaN(t) || t < 0)
+            {
+                intersection = ray.Origin;
+                return false;
+            }
+
+            intersection = ray.Origin + (t * ray.Direction);
+            return true;
+        }
+
+        /// <summary>
+        /// Intersect this plane with a finite <see cref="LineSegment"/>. Returns true and the meeting point
+        /// only when the crossing lies between the segment's ends; false (with
+        /// <paramref name="intersection"/> = the segment's tail) when the crossing is beyond an end or the
+        /// segment is parallel to the plane.
+        /// </summary>
+        /// <remarks>
+        /// Maths: parameterise the segment as <c>Tail + t·(Head − Tail)</c> with <c>t</c> in 0..1 (using
+        /// the full tail-to-head displacement so the ends sit exactly at <c>t = 0</c> and <c>t = 1</c>).
+        /// Solving the plane equation gives <c>t = −(Normal·Tail + D) / (Normal·(Head − Tail))</c>; the
+        /// hit counts only when that <c>t</c> falls inside 0..1. The denominator being zero means the
+        /// segment runs parallel to the plane (or has zero length).
+        /// </remarks>
+        public bool TryIntersect(LineSegment segment, out Vector intersection)
+        {
+            Vector tailToHead = segment.Head - segment.Tail;
+            double denominator = this.Normal.DotProduct(tailToHead);
+            if (denominator == 0)
+            {
+                intersection = segment.Tail;
+                return false;
+            }
+
+            double t = -(this.Normal.DotProduct(segment.Tail) + this.d) / denominator;
+            if (t < 0 || t > 1)
+            {
+                intersection = segment.Tail;
+                return false;
+            }
+
+            intersection = segment.Tail + (t * tailToHead);
+            return true;
+        }
+
         #endregion
 
         #region Predicates

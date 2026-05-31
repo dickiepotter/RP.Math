@@ -6,12 +6,12 @@ namespace RP.Math
     using Math = System.Math;
 
     /// <summary>
-    /// An immutable sphere in 3D space, defined by its centre and radius. A solid shape (see
-    /// <see cref="ISolidShape"/>), centre-anchored per the library convention.
+    /// An immutable sphere in 3D space, defined by its centre and radius (centre-anchored per the
+    /// library convention).
     /// </summary>
     /// <author>Richard Potter BSc(Hons)</author>
     [Serializable]
-    public struct Sphere : ISolidShape, IEquatable<Sphere>, IFormattable
+    public struct Sphere : IEquatable<Sphere>, IFormattable
     {
         #region Fields
 
@@ -63,12 +63,6 @@ namespace RP.Math
 
         /// <summary>The surface area, 4·π·r².</summary>
         public double SurfaceArea { get { return 4.0 * Math.PI * this.radius * this.radius; } }
-
-        /// <summary>The bounding box of the sphere.</summary>
-        public BoundingBox BoundingBox
-        {
-            get { return BoundingBox.FromCenterSize(this.center, new Vector(this.Diameter, this.Diameter, this.Diameter)); }
-        }
 
         #endregion
 

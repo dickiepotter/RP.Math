@@ -7,7 +7,7 @@ namespace RP.Math
 
     /// <summary>
     /// An immutable circle (a flat disc) in 3D space, defined by its centre, the unit normal of the
-    /// plane it lies in, and its radius. A planar shape (see <see cref="IPlanarShape"/>), centre-anchored.
+    /// plane it lies in, and its radius.
     /// </summary>
     /// <remarks>
     /// The normal supplied to the constructor is normalized; a zero normal defaults to +Z (the circle
@@ -15,7 +15,7 @@ namespace RP.Math
     /// </remarks>
     /// <author>Richard Potter BSc(Hons)</author>
     [Serializable]
-    public struct Circle : IPlanarShape, IEquatable<Circle>, IFormattable
+    public struct Circle : IEquatable<Circle>, IFormattable
     {
         #region Fields
 
@@ -79,22 +79,6 @@ namespace RP.Math
 
         /// <summary>The circumference, 2·π·r.</summary>
         public double Perimeter { get { return 2.0 * Math.PI * this.radius; } }
-
-        /// <summary>
-        /// The bounding box of the disc. The half-extent on each axis k is r·√(1 − n_k²), the standard
-        /// tight box around a tilted disc.
-        /// </summary>
-        public BoundingBox BoundingBox
-        {
-            get
-            {
-                Vector e = new Vector(
-                    this.radius * Math.Sqrt(Math.Max(0.0, 1.0 - (this.normal.X * this.normal.X))),
-                    this.radius * Math.Sqrt(Math.Max(0.0, 1.0 - (this.normal.Y * this.normal.Y))),
-                    this.radius * Math.Sqrt(Math.Max(0.0, 1.0 - (this.normal.Z * this.normal.Z))));
-                return new BoundingBox(this.center - e, this.center + e);
-            }
-        }
 
         #endregion
 
