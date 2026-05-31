@@ -1,0 +1,181 @@
+namespace RP.Math.Tests
+{
+    using System;
+    using System.Linq;
+
+    using FluentAssertions;
+
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+    using Math = System.Math;
+
+    /// <summary>
+    /// Tests that pin down genuine MATHEMATICAL bugs in the production code.
+    ///
+    /// Every assertion here states a fact that is provably true by elementary mathematics,
+    /// independent of the implementation. They are EXPECTED TO FAIL against the current code:
+    /// each failure localises a real defect, not a quirk of the test. They are deliberately
+    /// NOT written to rubber-stamp the existing behaviour.
+    /// </summary>
+    [TestClass]
+    public class MathematicalBugTests
+    {
+        // ------------------------------------------------------------------
+        // BUG 1 — Vector.Angle does not clamp the acos argument to the LOWER
+        // bound, so anti-parallel vectors yield NaN instead of pi.
+        //
+        // Vector.cs:892-894 does  Math.Acos(Math.Min(1.0f, dot)).  The dot of two
+        // independently-normalised vectors is mathematically in [-1, 1] but rounding
+        // routinely pushes it just outside; e.g. normalize(v) . normalize(v) can be
+        // 1.0000000000000002, so for v and -v the dot is -1.0000000000000002 and
+        // Acos(<-1) = NaN.  Only the upper bound is clamped; the lower bound is not.
+        //
+        // The angle between any non-zero vector and its negation is exactly pi.
+        // ------------------------------------------------------------------
+        [TestMethod, TestCategory("Bug")]
+        public void Angle_BetweenAVectorAndItsNegation_IsAlwaysPi_NeverNaN_Test()
+        {
+            // A sweep of plain integer vectors; the angle to the exact negation is pi
+            // for every one of them.  The buggy clamp turns some of these into NaN.
+            for (int x = 1; x <= 5; x++)
+            for (int y = 1; y <= 5; y++)
+            for (int z = 1; z <= 5; z++)
+            {
+                var v = new Vector(x, y, z);
+                var opposite = new Vector(-x, -y, -z);
+
+                double angle = Vector.Angle(v, opposite);
+
+                double.IsNaN(angle).Should().BeFalse(
+                    $"the angle between {v} and its negation must be pi, not NaN");
+                angle.Should().BeApproximately(Math.PI, 1e-9);
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // BUG 2 — Matrix * Matrix multiplies in the WRONG ORDER.
+        //
+        // Matrix.cs:336-371 builds result[r,c] = sum_k m1[k,c]*m2[r,k], which equals
+        // (m2 . m1)[r,c] — the reverse of the intended (m1 . m2).  Meanwhile
+        // Matrix * Vector (316-331) is the standard M.v.  So composing transforms via
+        // the * operator and applying them to a vector silently applies them in the
+        // wrong order.
+        //
+        // Compose translate-by-10-in-x (T) with uniform scale-by-2 (S).  As column-vector
+        // transforms, (T*S) means "scale then translate":
+        //     (T*S) * (1,0,0) = T * (S * (1,0,0)) = T * (2,0,0) = (12,0,0).
+        // The reversed product gives T applied first then S = (22,0,0).
+        // ------------------------------------------------------------------
+        [TestMethod, TestCategory("Bug")]
+        public void MatrixMultiply_ComposesTransformsInCorrectOrder_Test()
+        {
+            var t = Matrix.TranslationMatrix(10, 0, 0);
+            var s = Matrix.ScalingMatrix(2, 2, 2);
+
+            var ts = t * s;
+
+            // The translation column must survive composition unchanged (scale has no
+            // translation part): (T*S)[0,3] == 10.  Reversed product gives 20.
+            ts[0, 3].Should().Be(10);
+
+            var mapped = ts * new Vector(1, 0, 0);
+            mapped.X.Should().Be(12);
+            mapped.Y.Should().Be(0);
+            mapped.Z.Should().Be(0);
+        }
+
+        // ------------------------------------------------------------------
+        // BUG 3 — Matrix.ScalingMatrix(double[]) returns a TRANSLATION matrix.
+        //
+        // Matrix.cs:808-812 delegates to TranslationMatrix(xyz[0], xyz[1], xyz[2]) — a
+        // copy-paste error.  The scalar overload ScalingMatrix(x,y,z) is correct; only
+        // the array overload is wrong.
+        //
+        // A scale matrix for (2,3,4) maps (1,1,1) to (2,3,4); a translation maps it to
+        // (3,4,5).
+        // ------------------------------------------------------------------
+        [TestMethod, TestCategory("Bug")]
+        public void ScalingMatrixFromArray_Scales_NotTranslates_Test()
+        {
+            var scale = Matrix.ScalingMatrix(new[] { 2.0, 3.0, 4.0 });
+
+            // Diagonal carries the scale factors; translation column is zero.
+            scale[0, 0].Should().Be(2);
+            scale[1, 1].Should().Be(3);
+            scale[2, 2].Should().Be(4);
+            scale[0, 3].Should().Be(0);
+
+            var scaled = scale * new Vector(1, 1, 1);
+            scaled.Should().Be(new Vector(2, 3, 4));
+        }
+
+        // ------------------------------------------------------------------
+        // BUG 4 — Angle.ToAngleValue reduces to the wrong range and sign.
+        //
+        // Angle.cs:515-521 uses  rad > 2*pi ? IEEERemainder(rad, 2*pi) : rad.
+        // IEEERemainder returns a value in [-pi, pi], NOT [0, 2*pi).  For 540 degrees
+        // (= 3*pi) it returns IEEERemainder(3*pi, 2*pi) = -pi = -180 degrees.
+        //
+        // The method's own docstring states the contract:  "3*PI (540 degree) ==>
+        // PI (180 degree)".  The implementation produces -180 instead of +180.
+        // ------------------------------------------------------------------
+        [TestMethod, TestCategory("Bug")]
+        public void Angle_ReduceFiveFortyDegrees_GivesOneEighty_PerOwnDocstring_Test()
+        {
+            var a = new Angle(540, AngleUnits.DEG);
+
+            // 540 deg and 180 deg are the same direction; the canonical value is +180.
+            a.Deg.Should().BeApproximately(180, 1e-9);
+            a.Rad.Should().BeApproximately(Math.PI, 1e-9);
+        }
+
+        // ------------------------------------------------------------------
+        // BUG 5 — PolynomialRoots.SolveQuadratic loses precision to catastrophic
+        // cancellation for the root near zero.
+        //
+        // PolynomialRoots.cs:42-43 uses the naive (-b +/- sqrt(disc)) / (2a).  When b is
+        // large relative to sqrt(disc), (-b + sqrt(disc)) subtracts two nearly-equal
+        // numbers and the small root loses most of its significant digits.
+        //
+        // For x^2 - 1e8 x + 1 = 0 the product of the roots is c/a = 1, so the roots are
+        // exactly 1e8-ish and its reciprocal ~ 1e-8.  The naive formula returns about
+        // 7.45e-9 for the small root — ~25% relative error.  The stable form
+        // (q = -(b + sign(b)sqrt(disc))/2; roots q/a and c/q) is accurate.
+        // ------------------------------------------------------------------
+        [TestMethod, TestCategory("Bug")]
+        public void SolveQuadratic_SmallRoot_IsAccurate_NoCatastrophicCancellation_Test()
+        {
+            double[] roots = PolynomialRoots.SolveQuadratic(1, -1e8, 1);
+
+            roots.Should().HaveCount(2);
+
+            double small = roots.Min();
+            double large = roots.Max();
+
+            // Product of the roots equals c/a = 1 (Vieta).  This is the cleanest invariant.
+            (small * large).Should().BeApproximately(1.0, 1e-9);
+
+            // The small root is 1e-8 to far better than the ~25% error the naive form gives.
+            small.Should().BeApproximately(1e-8, 1e-11);
+        }
+
+        // ------------------------------------------------------------------
+        // BUG 6 — Axis.ToString() throws NullReferenceException.
+        //
+        // Axis.cs:391-393  ToString()  calls  ToString(null, null).
+        // Axis.cs:404      guards with  if (format != null || format != "")  — a tautology
+        // (no string is simultaneously non-null AND equal to ""), so the branch is always
+        // entered, and format[0] dereferences the null format, throwing.
+        // The condition should be a logical AND.
+        // ------------------------------------------------------------------
+        [TestMethod, TestCategory("Bug")]
+        public void AxisToString_DefaultFormat_DoesNotThrow_Test()
+        {
+            var axis = new Axis(AxisAlignment.RIGHT, AxisAlignment.UP, AxisAlignment.FORWARD);
+
+            Action act = () => axis.ToString();
+
+            act.Should().NotThrow();
+        }
+    }
+}
