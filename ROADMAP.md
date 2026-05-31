@@ -38,9 +38,9 @@ Every rich type should aim to provide:
 
 | Tier | Types |
 | --- | --- |
-| **Rich (done)** | `Vector`, `Angle`, `Matrix`, `Quaternion`, `Rotation`, `Attitude`, `Pose` |
+| **Rich (done)** | `Vector`, `Angle`, `Matrix`, `Quaternion`, `Rotation`, `Attitude`, `Pose`, `Plane` |
 | **Moderate** | `Axis`, `LineSegment` |
-| **Stub (data only)** | `Plane`, `Rectangle`, `Ray`, `Chord`, `OrthogonalAxis` |
+| **Stub (data only)** | `Rectangle`, `Ray`, `Chord`, `OrthogonalAxis` |
 | **Dormant** | `VectorPair` (fully commented out) |
 
 Orientation is now layered as intended: `Rotation` (Euler X/Y/Z) and `Attitude` (yaw/pitch/roll) are the
@@ -212,10 +212,16 @@ both contracts — build it alongside the first shape.
 - `Pose` ✅ done (position + orientation; accepts `Quaternion`/`Rotation`/`Attitude`, stores a normalized
   quaternion; `Apply`/`ApplyDirection`/`ApplyInverse`, `Compose`/`*`/`Inverse`, `ToMatrix`,
   `Translate`/`RotateBy`/`With…`, equality+tolerance, `ToString`, deconstruction).
-- `Plane` → normal/`DistanceTo(point)`, closest point, line/ray intersection, `FromPointNormal`/
-  `FromThreePoints`, normalize, side tests, equality, `ToString`, tests. (Also Layer-1 groundwork for
-  planar shapes.)
+- `Plane` ✅ done (normal / signed+unsigned `DistanceTo`, `ClosestPoint`, `Reflect`, `SideOf`, line
+  intersection `TryIntersectLine`/`IntersectLineParameter`, `FromPointNormal`/`FromThreePoints`,
+  `Normalize`, parallel/degenerate predicates, scale-and-direction-invariant geometric equality,
+  `ToString`, deconstruction, constants, 20 tests). Line intersection is expressed parametrically
+  `(point, direction)` so `Ray`/`LineSegment` can delegate once built out.
 - Raise `Axis`, `Matrix`, `Angle` test coverage toward `Vector` level.
+- Enhancement (deliberate divergence from upstream Vector repo): add `Angle`-typed `Yaw`/`Pitch`/`Roll`
+  overloads to `Vector` so it speaks the `Angle` vocabulary directly (today an `Angle` implicitly
+  converts to the `double rad` parameter). Confirmed no such overloads were lost in the rename —
+  current `Vector.cs` matches the upstream `Vector3.cs` public API exactly.
 
 **Phase 2 — Geometry shapes (headline goal)**
 - Add **`Box`** (axis-aligned bounds) — the `BoundingBox` return type.
