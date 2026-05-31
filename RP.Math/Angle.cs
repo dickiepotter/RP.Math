@@ -4,7 +4,7 @@ using System;
 
 #endregion
 
-namespace RPUtil.Math
+namespace RP.Math
 {
     /// <summary>
     /// Double precision angle

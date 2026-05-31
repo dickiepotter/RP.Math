@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 
-namespace RPUtil.Math.Math3D
+namespace RP.Math
 {
     public class Matrix: IEquatable<Matrix>, IFormattable
     {

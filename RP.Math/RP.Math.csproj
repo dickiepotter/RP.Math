@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
+    <AssemblyName>RP.Math</AssemblyName>
+    <RootNamespace>RP.Math</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- The library is in an early state and not yet fully XML-documented; silence the
+         "missing XML comment" (CS1591) and "missing param tag" (CS1573) noise so real warnings stay visible. -->
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+
+    <!-- The library uses modern C# and nullable annotations; enable both so the netstandard2.0
+         target (whose default LangVersion is 7.3, no nullable) compiles the same sources as net8.0. -->
+    <LangVersion>latest</LangVersion>
+    <Nullable>annotations</Nullable>
+
+    <!-- NuGet package -->
+    <PackageId>RP.Math</PackageId>
+    <Description>Numeric helpers (double tolerance comparison and ULP / expanded-double utilities) underpinning the RP.Math.Vector3 type.</Description>
+    <PackageTags>math;double;tolerance;ulp;numerics</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+  </PropertyGroup>
+
+  <!-- Packed into the NuGet package; Visible=false keeps them out of the project tree. -->
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\LICENSE.txt" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Math.Graphics
+namespace RP.Math
 {
     public class Camera
     {

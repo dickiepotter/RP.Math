@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Xml.Serialization;
 
-namespace RPUtil.Math.Math3D
+namespace RP.Math
 {
     public class LineSegment
     {
@@ -127,9 +127,16 @@ namespace RPUtil.Math.Math3D
 
         #region Axis based functions
 
+        // NOTE: These axis-aware helpers were incomplete in the original source: they call
+        // Vector.Yaw/Pitch/Roll(Angle, Axis), but the Vector type only offers Yaw/Pitch/Roll(double rad)
+        // about the world axes - it has no overload that rotates about an arbitrary Axis. The intended
+        // behaviour is undetermined, so they throw rather than silently doing the wrong rotation.
+        // (Matches the same flagged gap in OrthogonalAxis.)
+
         public static LineSegment Yaw(LineSegment l1, Angle angle, Axis axis)
         {
-            return new LineSegment(l1.Tail, l1.Tail - (l1.Tail - l1.Head).Yaw(angle, axis));
+            throw new NotImplementedException(
+                "LineSegment.Yaw was incomplete in the original source: Vector has no Yaw(Angle, Axis) overload that rotates about an arbitrary Axis.");
         }
 
         public LineSegment Yaw(Angle angle, Axis axis)
@@ -139,7 +146,8 @@ namespace RPUtil.Math.Math3D
 
         public static LineSegment Pitch(LineSegment l1, Angle angle, Axis axis)
         {
-            return new LineSegment(l1.Tail, l1.Tail - (l1.Tail - l1.Head).Pitch(angle, axis));
+            throw new NotImplementedException(
+                "LineSegment.Pitch was incomplete in the original source: Vector has no Pitch(Angle, Axis) overload that rotates about an arbitrary Axis.");
         }
 
         public LineSegment Pitch(Angle angle, Axis axis)
@@ -149,7 +157,8 @@ namespace RPUtil.Math.Math3D
 
         public static LineSegment Roll(LineSegment l1, Angle angle, Axis axis)
         {
-            return new LineSegment(l1.Tail, l1.Tail - (l1.Tail - l1.Head).Roll(angle, axis));
+            throw new NotImplementedException(
+                "LineSegment.Roll was incomplete in the original source: Vector has no Roll(Angle, Axis) overload that rotates about an arbitrary Axis.");
         }
 
         public LineSegment Roll(Angle angle, Axis axis)

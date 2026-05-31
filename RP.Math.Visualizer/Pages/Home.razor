@@ -1,0 +1,314 @@
+@page "/"
+@using System.Linq
+
+<PageTitle>RP.Math.Vector — Visualizer</PageTitle>
+
+@{
+    // Build the context and run the selected operation against the REAL Vector class.
+    var ctx = BuildContext();
+    OpResult? res = null;
+    string? error = null;
+    try { res = Op.Run(ctx); }
+    catch (Exception ex) { error = $"{ex.GetType().Name}: {ex.Message}"; }
+
+    var showB = Op.Uses(Input.B);
+    var showC = Op.Uses(Input.C);
+    var resultVec = res is { Kind: ResultKind.Vector } ? res.Vector : (Vector?)null;
+}
+
+<header class="masthead">
+    <h1>RP.<span>Math</span> Visualizer</h1>
+    <p>Drag to orbit the scene, drag a vector's tip or use the sliders, and watch every operation
+       recompute live — running the actual compiled <code>RP.Math</code> library in your browser.</p>
+</header>
+
+<div class="workspace">
+    <section class="scene">
+        <svg viewBox="0 0 540 500"
+             @onpointerdown="OnScenePointerDown"
+             @onpointermove="OnPointerMove"
+             @onpointerup="OnPointerUp"
+             @onpointerleave="OnPointerUp"
+             @onwheel="OnWheel">
+            <defs>
+                @Marker("ah-x", "#c0504d")
+                @Marker("ah-y", "#4e9a4e")
+                @Marker("ah-z", "#4472c4")
+                @Marker("ah-a", "#ffce47")
+                @Marker("ah-b", "#ff7ac6")
+                @Marker("ah-c", "#b39ddb")
+                @Marker("ah-r", "#4be0a8")
+            </defs>
+
+            @* ground grid on the XZ plane *@
+            @for (int i = -GridN; i <= GridN; i++)
+            {
+                var a = Line(i, 0, -GridN, i, 0, GridN);
+                var b = Line(-GridN, 0, i, GridN, 0, i);
+                <line x1="@a.x1" y1="@a.y1" x2="@a.x2" y2="@a.y2" class="grid" />
+                <line x1="@b.x1" y1="@b.y1" x2="@b.x2" y2="@b.y2" class="grid" />
+            }
+
+            @* axes *@
+            @AxisLine(AxisLen, 0, 0, "ah-x", "#c0504d", "X")
+            @AxisLine(0, AxisLen, 0, "ah-y", "#4e9a4e", "Y")
+            @AxisLine(0, 0, AxisLen, "ah-z", "#4472c4", "Z")
+
+            @* vectors *@
+            @VectorArrow(ctx.A, "ah-a", "#ffce47", "A", "A")
+            @if (showB) { @VectorArrow(ctx.B, "ah-b", "#ff7ac6", "B", "B") }
+            @if (showC) { @VectorArrow(ctx.C, "ah-c", "#b39ddb", "C", null) }
+            @if (resultVec is { } rv) { @VectorArrow(rv, "ah-r", "#4be0a8", "result", null, dashed: true) }
+        </svg>
+
+        <div class="scene-tools">
+            <button @onclick="ResetView">⟳ Reset view</button>
+            <span class="hint">yaw @Math.Round(cam.YawDeg)°, pitch @Math.Round(cam.PitchDeg)° — scroll to zoom</span>
+        </div>
+    </section>
+
+    <aside class="panel">
+        <label class="field">
+            <span>Operation</span>
+            <select @bind="selectedKey" @bind:event="onchange">
+                @foreach (var grp in Operations.All.GroupBy(o => o.Category))
+                {
+                    <optgroup label="@grp.Key">
+                        @foreach (var o in grp)
+                        {
+                            <option value="@o.Key">@o.Name</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+        </label>
+
+        <div class="formula"><code>@Op.Formula</code></div>
+        <p class="desc">@Op.Description</p>
+
+        <div class="result @ResultClass(res, error)">
+            <span class="result__label">Result</span>
+            @if (error is not null)
+            {
+                <div class="result__err">@error</div>
+            }
+            else if (res is not null)
+            {
+                @switch (res.Kind)
+                {
+                    case ResultKind.Vector:
+                        <div class="result__vec">(@F(res.Vector.X), @F(res.Vector.Y), @F(res.Vector.Z))</div>
+                        <div class="result__sub">magnitude @F(res.Vector.Magnitude)</div>
+                        break;
+                    case ResultKind.Scalar:
+                        <div class="result__num">@F(res.Scalar)</div>
+                        @if (Op.Key == "angle")
+                        {
+                            <div class="result__sub">@F(res.Scalar * 180.0 / Math.PI)°</div>
+                        }
+                        break;
+                    case ResultKind.Boolean:
+                        <div class="result__bool @(res.Boolean ? "yes" : "no")">@(res.Boolean ? "true" : "false")</div>
+                        break;
+                    case ResultKind.Integer:
+                        <div class="result__num">@res.Integer</div>
+                        break;
+                }
+            }
+        </div>
+
+        <VectorEditor Label="Vector A" Color="#ffce47" @bind-X="ax" @bind-Y="ay" @bind-Z="az" />
+        @if (showB)
+        {
+            <VectorEditor Label="Vector B" Color="#ff7ac6" @bind-X="bx" @bind-Y="by" @bind-Z="bz" />
+        }
+        @if (showC)
+        {
+            <VectorEditor Label="Vector C" Color="#b39ddb" @bind-X="cx" @bind-Y="cy" @bind-Z="cz" />
+        }
+
+        @if (Op.Uses(Input.Scalar)) { @Slider("scalar s", -5, 5, 0.1, scalar, v => scalar = v) }
+        @if (Op.Uses(Input.Angle)) { @Slider("angle θ (°)", -180, 180, 1, angleDeg, v => angleDeg = v) }
+        @if (Op.Uses(Input.Control)) { @Slider("control t", -0.5, 1.5, 0.01, control, v => control = v) }
+        @if (Op.Uses(Input.Digits)) { @Slider("digits", 0, 6, 1, digits, v => digits = (int)v) }
+        @if (Op.Uses(Input.Tolerance)) { @Slider("tolerance", 0, 0.5, 0.001, tolerance, v => tolerance = v) }
+    </aside>
+</div>
+
+@code {
+    private string selectedKey = "cross";
+    private OperationDef Op => Operations.All.FirstOrDefault(o => o.Key == selectedKey) ?? Operations.All[0];
+
+    private double ax = 2, ay = 1, az = 0;
+    private double bx = 0, by = 2, bz = 1;
+    private double cx = 1, cy = 0, cz = 2;
+    private double scalar = 2, angleDeg = 45, control = 0.5, tolerance = 1e-6;
+    private int digits = 2;
+
+    private readonly SceneCamera cam = new();
+
+    private const int GridN = 4;
+    private const double AxisLen = 4.5;
+
+    private OpContext BuildContext() => new()
+    {
+        A = new Vector(ax, ay, az),
+        B = new Vector(bx, by, bz),
+        C = new Vector(cx, cy, cz),
+        Scalar = scalar,
+        AngleDeg = angleDeg,
+        Control = control,
+        Digits = digits,
+        Tolerance = tolerance,
+    };
+
+    // ---- view / drag interaction ----
+    private string dragMode = "";   // "", "orbit", "A", "B"
+    private double lastX, lastY;
+
+    private void OnScenePointerDown(PointerEventArgs e)
+    {
+        if (dragMode == "") { dragMode = "orbit"; lastX = e.ClientX; lastY = e.ClientY; }
+    }
+
+    private void StartDragVector(string which, PointerEventArgs e)
+    {
+        dragMode = which; lastX = e.ClientX; lastY = e.ClientY;
+    }
+
+    private void OnPointerMove(PointerEventArgs e)
+    {
+        if (dragMode == "") return;
+        double dx = e.ClientX - lastX, dy = e.ClientY - lastY;
+        lastX = e.ClientX; lastY = e.ClientY;
+
+        if (dragMode == "orbit")
+        {
+            cam.YawDeg += dx * 0.4;
+            cam.PitchDeg = Math.Clamp(cam.PitchDeg + dy * 0.4, -89, 89);
+            return;
+        }
+
+        var d = cam.ScreenDeltaToWorld(dx, dy);
+        if (dragMode == "A") { ax = Snap(ax + d.x); ay = Snap(ay + d.y); az = Snap(az + d.z); }
+        else if (dragMode == "B") { bx = Snap(bx + d.x); by = Snap(by + d.y); bz = Snap(bz + d.z); }
+    }
+
+    private void OnPointerUp(PointerEventArgs e) => dragMode = "";
+
+    private void OnWheel(WheelEventArgs e)
+    {
+        cam.Scale = Math.Clamp(cam.Scale * (e.DeltaY < 0 ? 1.1 : 0.9), 14, 160);
+    }
+
+    private void ResetView() { cam.YawDeg = 35; cam.PitchDeg = 22; cam.Scale = 46; }
+
+    private static double Snap(double v) => Math.Round(v, 2);
+
+    // ---- drawing helpers ----
+    private (double x1, double y1, double x2, double y2) Line(double ax, double ay, double az, double bx, double by, double bz)
+    {
+        var a = cam.Project(ax, ay, az);
+        var b = cam.Project(bx, by, bz);
+        return (a.sx, a.sy, b.sx, b.sy);
+    }
+
+    private RenderFragment AxisLine(double x, double y, double z, string marker, string color, string label) => b =>
+    {
+        var o = cam.Project(0, 0, 0);
+        var p = cam.Project(x, y, z);
+        b.OpenElement(0, "line");
+        b.AddAttribute(1, "x1", o.sx); b.AddAttribute(2, "y1", o.sy);
+        b.AddAttribute(3, "x2", p.sx); b.AddAttribute(4, "y2", p.sy);
+        b.AddAttribute(5, "class", "axis");
+        b.AddAttribute(6, "stroke", color);
+        b.AddAttribute(7, "marker-end", $"url(#{marker})");
+        b.CloseElement();
+
+        b.OpenElement(8, "text");
+        b.AddAttribute(9, "x", p.sx + 6); b.AddAttribute(10, "y", p.sy - 4);
+        b.AddAttribute(11, "class", "axis-label");
+        b.AddAttribute(12, "fill", color);
+        b.AddContent(13, label);
+        b.CloseElement();
+    };
+
+    private RenderFragment VectorArrow(Vector v, string marker, string color, string label, string? dragKey, bool dashed = false) => b =>
+    {
+        var o = cam.Project(0, 0, 0);
+        var p = cam.Project(v.X, v.Y, v.Z);
+
+        b.OpenElement(0, "line");
+        b.AddAttribute(1, "x1", o.sx); b.AddAttribute(2, "y1", o.sy);
+        b.AddAttribute(3, "x2", p.sx); b.AddAttribute(4, "y2", p.sy);
+        b.AddAttribute(5, "class", dashed ? "vec dashed" : "vec");
+        b.AddAttribute(6, "stroke", color);
+        b.AddAttribute(7, "marker-end", $"url(#{marker})");
+        b.CloseElement();
+
+        if (dragKey is not null)
+        {
+            b.OpenElement(8, "circle");
+            b.AddAttribute(9, "cx", p.sx); b.AddAttribute(10, "cy", p.sy);
+            b.AddAttribute(11, "r", 9);
+            b.AddAttribute(12, "class", "handle");
+            b.AddAttribute(13, "fill", color);
+            b.AddAttribute(14, "onpointerdown",
+                EventCallback.Factory.Create<PointerEventArgs>(this, e => StartDragVector(dragKey, e)));
+            b.AddEventStopPropagationAttribute(15, "onpointerdown", true);
+            b.CloseElement();
+        }
+
+        b.OpenElement(16, "text");
+        b.AddAttribute(17, "x", p.sx + 10); b.AddAttribute(18, "y", p.sy + 4);
+        b.AddAttribute(19, "class", "vec-label");
+        b.AddAttribute(20, "fill", color);
+        b.AddContent(21, label);
+        b.CloseElement();
+    };
+
+    private static RenderFragment Marker(string id, string color) => b =>
+    {
+        b.OpenElement(0, "marker");
+        b.AddAttribute(1, "id", id);
+        b.AddAttribute(2, "markerWidth", "11"); b.AddAttribute(3, "markerHeight", "11");
+        b.AddAttribute(4, "refX", "8"); b.AddAttribute(5, "refY", "4");
+        b.AddAttribute(6, "orient", "auto"); b.AddAttribute(7, "markerUnits", "userSpaceOnUse");
+        b.OpenElement(8, "path");
+        b.AddAttribute(9, "d", "M0,0 L9,4 L0,8 Z");
+        b.AddAttribute(10, "fill", color);
+        b.CloseElement();
+        b.CloseElement();
+    };
+
+    private RenderFragment Slider(string label, double min, double max, double step, double value, Action<double> set) => b =>
+    {
+        b.OpenElement(0, "label"); b.AddAttribute(1, "class", "field slider");
+        b.OpenElement(2, "span"); b.AddContent(3, $"{label}: {value.ToString("0.###", CultureInfo.InvariantCulture)}"); b.CloseElement();
+        b.OpenElement(4, "input");
+        b.AddAttribute(5, "type", "range");
+        b.AddAttribute(6, "min", min); b.AddAttribute(7, "max", max); b.AddAttribute(8, "step", step);
+        b.AddAttribute(9, "value", value.ToString(CultureInfo.InvariantCulture));
+        b.AddAttribute(10, "oninput", EventCallback.Factory.Create<ChangeEventArgs>(this, e =>
+        {
+            if (double.TryParse(Convert.ToString(e.Value, CultureInfo.InvariantCulture),
+                    NumberStyles.Any, CultureInfo.InvariantCulture, out var v)) set(v);
+        }));
+        b.CloseElement();
+        b.CloseElement();
+    };
+
+    private static string F(double d)
+    {
+        if (double.IsNaN(d)) return "NaN";
+        if (double.IsInfinity(d)) return d > 0 ? "∞" : "−∞";
+        return d.ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    private static string ResultClass(OpResult? r, string? err)
+        => err is not null ? "is-error" : r?.Kind switch
+        {
+            ResultKind.Boolean => r.Boolean ? "is-true" : "is-false",
+            _ => "is-value",
+        };
+}

@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Xml.Serialization;
 
-namespace RPUtil.Math.Math3D
+namespace RP.Math
 {
     /*public class VectorPair
         : IComparable, IComparable<VectorPair>, IEquatable<VectorPair>, IFormattable

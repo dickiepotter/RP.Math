@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Math.Math3D
+namespace RP.Math
 {
     public class Quaternion
     {

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <AssemblyName>RP.Math.Tests</AssemblyName>
+    <RootNamespace>RP.Math.Tests</RootNamespace>
+    <!-- CS1718: several tests deliberately compare a value to itself to document framework (NaN / infinity) behaviour. -->
+    <NoWarn>$(NoWarn);CS1718</NoWarn>
+  </PropertyGroup>
+
+  <!-- Versions were previously supplied by a central Directory.Packages.props (removed with the former
+       Vector subtree); pinned here now that this project stands alone. Microsoft.NET.Test.Sdk keeps the
+       classic VSTest runner so `dotnet test` works without the .NET 10 SDK's Testing-Platform opt-in. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.6.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.6.0" />
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RP.Math\RP.Math.csproj" />
+  </ItemGroup>
+
+</Project>
