@@ -27,6 +27,7 @@ more.*
 - [`Pose`](#pose)
 - [`Matrix`](#matrix)
 - [`Axis` and `OrthogonalAxis`](#axis-and-orthogonalaxis)
+- [Shapes: conceptual and placed](#shapes-conceptual-and-placed)
 - [Supporting numeric helpers](#supporting-numeric-helpers)
 - [Points of interest](#points-of-interest)
 - [Status and history](#status-and-history)
@@ -122,6 +123,12 @@ not exploding) result.
 | **`Pose`** | A position **and** an orientation together. | A rigid placement ("where" + "which way") in friendly form. |
 | **`Matrix`** | A 4×4 transformation matrix. | The general linear-algebra workhorse for transforms. |
 | **`Axis`** / **`OrthogonalAxis`** | A choice of axis convention (which way is up, right, forward). | Describe coordinate frames rather than positions. |
+| **`Circle`**, **`Triangle`**, **`Rectangle`**, **`Ellipse`**, **`Annulus`**, **`Sector`** | *Conceptual* flat shapes — size and proportion only, no position. | Pure intrinsic geometry: area, perimeter, angles; comparable by size. |
+| **`Sphere`**, **`Cuboid`**, **`Cylinder`**, **`Cone`**, **`Capsule`**, **`Ellipsoid`**, **`Torus`** | *Conceptual* solids — size and proportion only, no position. | Pure intrinsic geometry: volume, surface area; comparable by size. |
+| **`Placed…`** (one per conceptual shape) | A conceptual shape **placed** in space by a `Pose`. | Add world-space maths: containment, closest point, line/ray hits. |
+| **`PlacedPolygon`**, **`PlacedTetrahedron`** | Vertex-defined shapes (a planar polygon; a solid with four corners). | Always placed — defined by their corners, with no separate conceptual form. |
+
+The shape types come in two layers — a [conceptual shape and its placed partner](#shapes-conceptual-and-placed) — so that size-only maths never has to see a position.
 
 The four members of the **line family** are best understood together — they differ only in *where
 they are allowed to stop*:
@@ -850,6 +857,185 @@ basis vector from the other two for both left- and right-handed conventions (`Lh
 
 ---
 
+## Shapes: conceptual and placed
+
+The shape types are built around one deliberate split: **what a shape *is*** is kept separate from
+**where it *is***.
+
+- A **conceptual shape** — `Triangle`, `Rectangle`, `Cuboid`, `Cylinder` — describes only the intrinsic
+  geometry: size and proportion, in no particular place. It has no centre, no orientation, no position
+  of any kind. Everything it computes (area, volume, angles, diagonals, classification) depends solely
+  on its own dimensions.
+- A **placed shape** — `PlacedTriangle`, `PlacedRectangle`, `PlacedCuboid`, `PlacedCylinder` — is a
+  conceptual shape **together with a [`Pose`](#pose)** that puts it somewhere in the world. Only the
+  placed form answers world-space questions: does it contain this point, what is the closest point on
+  it, where does this line or ray strike it.
+
+### Why keep them apart
+
+Because position confuses size-only questions. If you want to know which of two circles is bigger, the
+honest comparison is between their areas — and a position has no business being part of that answer; it
+can only muddy what "bigger" means. Keeping the conceptual shape position-free makes those comparisons
+exact and unambiguous:
+
+```csharp
+var a = new Cylinder(radius: 2, height: 5);
+var b = new Cylinder(radius: 3, height: 1);
+bool aIsBigger = a.Volume > b.Volume;   // pure size — no placement anywhere in sight
+bool same      = a == b;                 // equality means "same shape", not "same place"
+```
+
+Each conceptual shape implements `IComparable<T>` and the comparison operators (`<`, `>`, `<=`, `>=`)
+**by size** — area for the flat shapes, volume for the solids — exactly as [`Vector`](#vector--the-foundation)
+compares by magnitude. As with `Vector`, `==` still means *equal dimensions*, not *equal size*.
+
+### How a placement is applied
+
+Each conceptual shape has **one hand-written placed partner**, named `Placed` + the shape name (no
+cleverer name than that). A placed shape stores the conceptual `Shape` and a `Pose`, and delegates:
+
+```csharp
+var disc  = new Rectangle(4, 6);
+var board = new PlacedRectangle(disc, Pose.At(new Vector(0, 0, 10)));
+board.Area;                       // 24 — delegated straight to the conceptual shape
+board.Contains(somePoint, 1e-9);  // a world-space question only the placed form can answer
+```
+
+The placed form does its world-space maths by working **in the shape's own local frame**. It maps the
+incoming world point back into that frame with `Pose.ApplyInverse`, runs the simple canonical maths
+there (where a rectangle is axis-aligned at the origin, a cylinder runs along local +Z, and so on), and
+maps any returned point forward again with `Pose.Apply`. Writing the geometry once, in the easy frame,
+is the whole reason the two layers are kept apart.
+
+### Placement and symmetry
+
+How much of an orientation actually *matters* depends on the shape's symmetry — which is why the placed
+types differ in what their pose meaningfully controls:
+
+| Symmetry | What the placement pins down | Shapes |
+|----------|------------------------------|--------|
+| Fully symmetric (a point) | only a centre; orientation is irrelevant | `PlacedSphere` |
+| Rotationally symmetric about an axis | a centre and one axis direction; spin about it is irrelevant | `PlacedCircle`, `PlacedCylinder`, `PlacedCone`, `PlacedCapsule`, `PlacedAnnulus`, `PlacedTorus` |
+| No symmetry to spare | a full orientation | `PlacedRectangle`, `PlacedCuboid`, `PlacedEllipse`, `PlacedEllipsoid`, `PlacedSector` |
+| Defined by its corners | placement is implied by the corner positions | `PlacedTriangle`, `PlacedPolygon`, `PlacedTetrahedron` |
+
+A `PlacedSphere` therefore ignores its pose's orientation entirely, and a `PlacedCircle` cares only about
+its normal (any spin about that normal leaves the disc unchanged) — the symmetry simply makes the surplus
+parts of the `Pose` inert.
+
+### Filled regions
+
+Every shape is treated as a **filled region**, not just an outline or surface. `Contains` means "on or
+within"; a `Rectangle` is the solid rectangle, a `Cylinder` is the solid cylinder. This matches the
+existing `Sphere`, whose `Contains` has always meant "on or within".
+
+### The shapes
+
+**Flat shapes** (a `Placed…` partner lays each on a plane in space):
+
+| Conceptual shape | Defined by | Placement notes |
+|------------------|-----------|-----------------|
+| `Circle` | radius | a flat disc; axis symmetry, so the placed form needs only a centre and a normal |
+| `Triangle` | three side lengths (A, B, C) | Heron area, angles by the law of cosines, classification; placed form adds corners, containment, closest point, line/ray hits (see special case below) |
+| `Rectangle` | width, height | full orientation; placed form lies on a plane with width along local +X, height along +Y |
+| `Ellipse` | two semi-axes | full orientation; eccentricity and foci; placed closest-point uses Eberly's robust method |
+| `Annulus` | inner & outer radius | axis symmetry; the filled ring between two concentric circles |
+| `Sector` | radius, sweep angle | a pie slice; the placed form is anchored at its apex (not its centroid) |
+
+**Solids** (a `Placed…` partner positions each in space):
+
+| Conceptual shape | Defined by | Placement notes |
+|------------------|-----------|-----------------|
+| `Sphere` | radius | fully symmetric, so the placed form needs only a centre (its pose's orientation is inert) |
+| `Cuboid` | width, height, depth | full orientation; oriented box (the slab test runs in its local, axis-aligned frame) |
+| `Cylinder` | radius, height | axis symmetry; runs along local +Z, curved side + two caps |
+| `Cone` | base radius, height | axis symmetry; placed form stands on its base, closest-point solved in the axial–radial half-plane |
+| `Capsule` | radius, cylinder height | axis symmetry; a swept segment (cylinder with two hemispherical caps) |
+| `Ellipsoid` | three semi-axes | full orientation; intersection by scaling to a unit sphere, closest-point by a Lagrange-multiplier bisection |
+| `Torus` | major & minor radius | axis symmetry; line/ray intersection is an exact **quartic** (see below) |
+
+**Vertex-defined shapes** (positioned in their own right — no conceptual partner):
+
+| Shape | Defined by | Notes |
+|-------|-----------|-------|
+| `PlacedPolygon` | ordered coplanar corners | any simple polygon (convex or concave); robust area/normal/centroid, crossing-number containment |
+| `PlacedTetrahedron` | four corners | the simplest solid; barycentric containment, per-face intersection |
+
+> **"Cuboid", not "Box".** The solid box is named `Cuboid` so the name `Box` stays free for a future
+> axis-aligned *bounding* box (a different idea — the box that just contains something, used for quick
+> rejection — and the reason the earlier `BoundingBox` was removed rather than renamed).
+
+### Vertex-defined shapes
+
+`PlacedPolygon` and `PlacedTetrahedron` are defined directly by their corner points, so — like the
+corners of `PlacedTriangle` — they are **always placed**: their position is implicit in the corners and
+there is no separate conceptual form (hence they carry the `Placed` prefix but have no plain-named
+partner). `PlacedPolygon` handles any simple planar polygon, convex or concave (area, normal and centroid
+come from summed edge cross-products; containment is a crossing-number test done in the polygon's own
+plane). `PlacedTetrahedron` is the simplest solid, with barycentric containment and intersection tested
+face by face.
+
+### Exact intersections and the quartic solver
+
+Line/ray intersection is exact for every placed solid. Most reduce to a quadratic in the line parameter
+(sphere, cylinder, cone, capsule, and the ellipsoid after scaling space to a unit sphere). The `Torus`
+is the exception: substituting the line into its implicit equation gives a **quartic**, so the library
+includes a small real-root solver, [`PolynomialRoots`](RP.Math/PolynomialRoots.cs) (quadratic by formula,
+cubic by Cardano, quartic by Ferrari). A line can pierce a torus up to four times; the solver returns all
+real crossings and the placed torus reports the nearest and farthest.
+
+### `Triangle`, the special case
+
+A triangle is the one shape whose natural placed form is its **three corners**, not a tidy centre and
+size. Its conceptual form is therefore its three **side lengths** — the position-free description that
+still fixes area, angles and classification. `PlacedTriangle` stores that `Triangle` plus a `Pose` whose
+position is the triangle's centroid; in the local frame the centroid sits at the origin, the A→B edge
+runs along local +X and corner C lies on the local +Y side (a layout recovered from the side lengths via
+the law of cosines).
+
+The everyday way to build one is from three world corners:
+
+```csharp
+var t = PlacedTriangle.FromVertices(a, b, c);   // recovers both the side lengths and the placing pose
+t.A; t.B; t.C;                                   // round-trips back to the original corners
+```
+
+`FromVertices` has to turn three points into a `Pose`, which means recovering an orientation from a
+coordinate frame. The library has no matrix-to-quaternion conversion, so the rotation is built by
+**composing the library's own `Quaternion.FromAxisAngle` turns** — first swinging local +Z onto the face
+normal, then spinning about that normal to line local +X up with the A→B edge. Building it from the
+existing primitives keeps it consistent with the quaternion conventions used everywhere else (and the
+round-trip is covered by tests).
+
+### `Circle` and `Sphere`
+
+`Circle` and `Sphere` follow the same split as everything else: the conceptual `Circle` is just a radius
+(area, circumference) and the conceptual `Sphere` is just a radius (volume, surface area), each comparable
+by size, while `PlacedCircle` and `PlacedSphere` add the placement and the world-space maths. They were
+originally written as positioned types and have been converted to match — `PlacedCircle.InXYPlane(circle,
+centre)` and `PlacedSphere.At(sphere, centre)` are the everyday factories.
+
+### Decisions captured here
+
+- **Conceptual and placed are separate types.** Size-only maths lives on the conceptual shape and never
+  sees a position; world-space maths lives on the placed shape.
+- **Paired concrete types, not a generic wrapper.** Each shape has its own hand-written placed partner
+  rather than a single `Placed<T>` over an interface (an earlier `IShape` abstraction was removed).
+- **Named `Placed` + the shape name.** `PlacedTriangle`, `PlacedRectangle`, and so on — no invented names.
+- **A placed shape is a conceptual shape plus a `Pose`.** World queries are done in the shape's local
+  frame via `ApplyInverse`/`Apply`.
+- **Shapes are filled regions.** `Contains` means "on or within".
+- **Conceptual shapes are comparable by size** (`IComparable`, comparison operators), mirroring `Vector`.
+- **Vertex-defined shapes are always placed.** `PlacedPolygon` and `PlacedTetrahedron` are defined by
+  general corner points (not regularised), so they have no conceptual partner; they carry the `Placed`
+  prefix because they only ever exist positioned — matching how `PlacedTriangle`'s corners already work.
+- **`Circle` and `Sphere` follow the split too.** Originally positioned, they are now a conceptual radius
+  plus `PlacedCircle` / `PlacedSphere`, consistent with every other shape.
+- **Intersections are exact, including the torus.** Rather than approximate the torus's line/ray hits, a
+  real quartic solver (`PolynomialRoots`) was added so its crossings are exact like the other solids'.
+
+---
+
 ## Supporting numeric helpers
 
 A small amount of plumbing supports the maths above and is not usually called directly:
@@ -865,8 +1051,8 @@ A small amount of plumbing supports the maths above and is not usually called di
   thrown by the strict `Normalize` methods when asked to normalise a zero-length value (the
   `…OrDefault` variants avoid these).
 
-> The `Shape` namespace (`Circle`, `Sphere`, `Rectangle`) is intentionally
-> **not** documented here — that part of the library is still being worked out.
+> The `Shape` namespace is documented above under [Shapes: conceptual and
+> placed](#shapes-conceptual-and-placed).
 
 ---
 
@@ -888,5 +1074,7 @@ all in the spirit of the original: small immutable values, rich and well-explain
 functionality, clarity ahead of speed.
 
 It is an early-state, actively-developing project: the core numeric types are well covered by tests,
-while a few helpers (notably the `OrthogonalAxis` rotations) are flagged as unfinished, and the
-`Shape` types are not yet settled.
+while a few helpers (notably the `OrthogonalAxis` rotations) are flagged as unfinished. The `Shape`
+types follow a settled conceptual/placed split — `Circle`, `Sphere`, `Triangle`, `Rectangle`, `Ellipse`,
+`Annulus`, `Sector`, `Cuboid`, `Cylinder`, `Cone`, `Capsule`, `Ellipsoid` and `Torus`, each with a
+`Placed…` partner, plus the always-placed `PlacedPolygon` and `PlacedTetrahedron`.

@@ -6,181 +6,90 @@ namespace RP.Math
     using Math = System.Math;
 
     /// <summary>
-    /// An immutable circle (a flat disc) in 3D space, defined by its centre, the unit normal of the
-    /// plane it lies in, and its radius.
+    /// A conceptual (unpositioned) circle (a flat disc), described purely by its <see cref="Radius"/>.
     /// </summary>
     /// <remarks>
-    /// The normal supplied to the constructor is normalized; a zero normal defaults to +Z (the circle
-    /// then lies in the XY plane).
+    /// This type holds only the intrinsic shape — its size — with no position or orientation. Its area and
+    /// circumference depend solely on the radius, so circles can be compared by size on their own (for
+    /// example by area) without any notion of where they sit. To place a disc on a plane in space, pair it
+    /// with a position; see <see cref="PlacedCircle"/>.
     /// </remarks>
     /// <author>Richard Potter BSc(Hons)</author>
     [Serializable]
-    public struct Circle : IEquatable<Circle>, IFormattable
+    public struct Circle : IEquatable<Circle>, IComparable<Circle>, IFormattable
     {
         #region Fields
 
-        private readonly Vector center;
-        private readonly Vector normal; // stored unit length
         private readonly double radius;
 
         #endregion
 
         #region Constructors
 
-        /// <summary>Construct a circle from its centre, plane normal and radius.</summary>
+        /// <summary>Construct a circle from its radius.</summary>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="radius"/> is negative.</exception>
-        public Circle(Vector center, Vector normal, double radius)
+        public Circle(double radius)
         {
-            if (radius < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(radius), radius, NEGATIVE_RADIUS);
-            }
-
-            this.center = center;
-            Vector unit = normal.NormalizeOrDefault();
-            this.normal = unit.IsZero() ? new Vector(0, 0, 1) : unit;
+            if (radius < 0) throw new ArgumentOutOfRangeException(nameof(radius), radius, NEGATIVE_RADIUS);
             this.radius = radius;
         }
 
         #endregion
 
-        #region Factories
+        #region Constants
 
-        /// <summary>A circle lying in the XY plane (normal +Z) at the given centre and radius.</summary>
-        public static Circle InXYPlane(Vector center, double radius)
-        {
-            return new Circle(center, new Vector(0, 0, 1), radius);
-        }
+        /// <summary>The unit circle: radius 1.</summary>
+        public static readonly Circle Unit = new Circle(1);
 
         #endregion
 
         #region Accessors
 
-        /// <summary>The centre of the circle.</summary>
-        public Vector Center { get { return this.center; } }
-
         /// <summary>The radius of the circle.</summary>
         public double Radius { get { return this.radius; } }
 
-        /// <summary>The diameter of the circle.</summary>
+        /// <summary>The diameter of the circle, twice the radius.</summary>
         public double Diameter { get { return this.radius * 2.0; } }
-
-        /// <summary>The geometric centre (canonical origin) of the shape.</summary>
-        public Vector Centroid { get { return this.center; } }
-
-        /// <summary>The unit normal of the plane the circle lies in.</summary>
-        public Vector Normal { get { return this.normal; } }
-
-        /// <summary>The supporting plane the circle lies in.</summary>
-        public Plane Plane { get { return Plane.FromPointNormal(this.center, this.normal); } }
 
         /// <summary>The enclosed area, π·r².</summary>
         public double Area { get { return Math.PI * this.radius * this.radius; } }
 
-        /// <summary>The circumference, 2·π·r.</summary>
-        public double Perimeter { get { return 2.0 * Math.PI * this.radius; } }
+        /// <summary>The circumference (perimeter), 2·π·r.</summary>
+        public double Circumference { get { return 2.0 * Math.PI * this.radius; } }
+
+        /// <summary>The perimeter (an alias for <see cref="Circumference"/>), 2·π·r.</summary>
+        public double Perimeter { get { return this.Circumference; } }
 
         #endregion
 
-        #region Containment and queries
+        #region Comparison (by area)
 
-        /// <summary>Whether <paramref name="point"/> lies on the disc (on its plane and within its radius).</summary>
-        public bool Contains(Vector point)
-        {
-            return this.Contains(point, 0);
-        }
+        /// <summary>Compare with another circle by <see cref="Area"/> (equivalently by radius).</summary>
+        public int CompareTo(Circle other) { return this.radius.CompareTo(other.Radius); }
 
-        /// <summary>Whether <paramref name="point"/> lies on the disc within <paramref name="tolerance"/>.</summary>
-        public bool Contains(Vector point, double tolerance)
-        {
-            Vector offset = point - this.center;
-            double outOfPlane = Math.Abs(offset.DotProduct(this.normal));
-            if (outOfPlane > tolerance)
-            {
-                return false;
-            }
+        /// <summary>Whether the left circle's area is less than the right's.</summary>
+        public static bool operator <(Circle c1, Circle c2) { return c1.Radius < c2.Radius; }
 
-            double r = this.radius + tolerance;
-            return offset.MagnitudeSquared <= r * r;
-        }
+        /// <summary>Whether the left circle's area is greater than the right's.</summary>
+        public static bool operator >(Circle c1, Circle c2) { return c1.Radius > c2.Radius; }
 
-        /// <summary>The point on the disc closest to <paramref name="point"/> (projected onto the plane, then clamped to the radius).</summary>
-        public Vector ClosestPoint(Vector point)
-        {
-            Vector offset = point - this.center;
-            Vector inPlane = offset - (offset.DotProduct(this.normal) * this.normal);
-            double distance = inPlane.Magnitude;
-            if (distance <= this.radius || distance == 0)
-            {
-                return this.center + inPlane;
-            }
+        /// <summary>Whether the left circle's area is less than or equal to the right's.</summary>
+        public static bool operator <=(Circle c1, Circle c2) { return c1.Radius <= c2.Radius; }
 
-            return this.center + (inPlane * (this.radius / distance));
-        }
-
-        #endregion
-
-        #region Intersection with a line or ray
-
-        /// <summary>
-        /// Intersect the disc with an infinite <see cref="Line"/>. Returns true and the meeting point when
-        /// the line crosses the disc; false when the line crosses the plane outside the radius or runs
-        /// parallel to the plane.
-        /// </summary>
-        /// <remarks>Treats the circle as a filled disc: it intersects the line with the disc's supporting
-        /// <see cref="Plane"/>, then keeps the hit only if it falls within the radius. A line lying within
-        /// the plane is parallel to it and is reported as no intersection.</remarks>
-        public bool TryIntersect(Line line, out Vector point)
-        {
-            if (!this.Plane.TryIntersect(line, out point))
-            {
-                return false;
-            }
-
-            return (point - this.center).MagnitudeSquared <= this.radius * this.radius;
-        }
-
-        /// <summary>
-        /// Intersect the disc with a <see cref="Ray"/>. As <see cref="TryIntersect(Line, out Vector)"/>,
-        /// but the hit must lie at or ahead of the ray's origin.
-        /// </summary>
-        public bool TryIntersect(Ray ray, out Vector point)
-        {
-            if (!this.Plane.TryIntersect(ray, out point))
-            {
-                return false;
-            }
-
-            return (point - this.center).MagnitudeSquared <= this.radius * this.radius;
-        }
-
-        #endregion
-
-        #region Transformation (returns a new circle)
-
-        /// <summary>A copy of the circle translated by <paramref name="offset"/>.</summary>
-        public Circle Translate(Vector offset)
-        {
-            return new Circle(this.center + offset, this.normal, this.radius);
-        }
-
-        /// <summary>A copy of the circle with its radius scaled by <paramref name="factor"/>.</summary>
-        public Circle Scale(double factor)
-        {
-            return new Circle(this.center, this.normal, this.radius * factor);
-        }
+        /// <summary>Whether the left circle's area is greater than or equal to the right's.</summary>
+        public static bool operator >=(Circle c1, Circle c2) { return c1.Radius >= c2.Radius; }
 
         #endregion
 
         #region Operators
 
-        /// <summary>Equality of centre, normal and radius.</summary>
+        /// <summary>Equality of radius.</summary>
         public static bool operator ==(Circle c1, Circle c2)
         {
-            return c1.Center == c2.Center && c1.Normal == c2.Normal && c1.Radius == c2.Radius;
+            return c1.Radius == c2.Radius;
         }
 
-        /// <summary>Inequality of centre, normal and radius.</summary>
+        /// <summary>Inequality of radius.</summary>
         public static bool operator !=(Circle c1, Circle c2)
         {
             return !(c1 == c2);
@@ -196,7 +105,7 @@ namespace RP.Math
             return other is Circle c && this.Equals(c);
         }
 
-        /// <summary>Equality with another circle (centre, normal and radius).</summary>
+        /// <summary>Equality with another circle (radius).</summary>
         public bool Equals(Circle other)
         {
             return this == other;
@@ -205,39 +114,31 @@ namespace RP.Math
         /// <summary>Equality with another circle within an absolute tolerance.</summary>
         public bool Equals(Circle other, double tolerance)
         {
-            return this.center.Equals(other.Center, tolerance)
-                && this.normal.Equals(other.Normal, tolerance)
-                && this.radius.AlmostEqualsWithAbsTolerance(other.Radius, tolerance);
+            return this.radius.AlmostEqualsWithAbsTolerance(other.Radius, tolerance);
         }
 
-        /// <summary>A hash code derived from the centre, normal and radius.</summary>
+        /// <summary>A hash code derived from the radius.</summary>
         public override int GetHashCode()
         {
-            return this.center.GetHashCode() ^ this.normal.GetHashCode() ^ this.radius.GetHashCode();
+            return this.radius.GetHashCode();
         }
 
-        /// <summary>Deconstruct into centre, normal and radius.</summary>
-        public void Deconstruct(out Vector center, out Vector normal, out double radius)
+        /// <summary>Deconstruct into the radius.</summary>
+        public void Deconstruct(out double radius)
         {
-            center = this.center;
-            normal = this.normal;
             radius = this.radius;
         }
 
-        /// <summary>A string of the form <c>(center, n=normal, r=radius)</c>.</summary>
+        /// <summary>A string of the form <c>(r=radius)</c>.</summary>
         public override string ToString()
         {
             return this.ToString(null, CultureInfo.CurrentCulture);
         }
 
-        /// <summary>A formatted string of the form <c>(center, n=normal, r=radius)</c> where components use <paramref name="format"/>.</summary>
+        /// <summary>A formatted string of the form <c>(r=radius)</c> where the radius uses <paramref name="format"/>.</summary>
         public string ToString(string? format, IFormatProvider? formatProvider)
         {
-            return string.Format(
-                "({0}, n={1}, r={2})",
-                this.center.ToString(format, formatProvider),
-                this.normal.ToString(format, formatProvider),
-                this.radius.ToString(format, formatProvider));
+            return string.Format("(r={0})", this.radius.ToString(format, formatProvider));
         }
 
         #endregion
