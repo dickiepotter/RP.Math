@@ -6,21 +6,29 @@ namespace RP.Math
 
     /// <summary>
     /// A chord: the straight line joining two points that both lie on a circle. It is a
-    /// <see cref="LineSegment"/> that also knows the <see cref="Radius"/> of the circle it belongs to,
-    /// which unlocks the circle maths around it (the angle it spans, the arc above it, and so on).
+    /// <see cref="LineSegment"/> that also knows the <see cref="Radius"/> of the circle it belongs to.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// A picture helps: draw a circle, then a straight line cutting across it. That line is the chord.
-    /// The two ends sit on the circle's edge. From just the chord's <see cref="LineSegment.Length"/> and
-    /// the circle's <see cref="Radius"/> you can work out several things:
+    /// Picture a circle with a straight line drawn across it; both ends of that line touch the circle's
+    /// edge. That line is a chord. On its own it is just a line segment — but once you also know the
+    /// circle's radius, a surprising amount of circle geometry follows from the chord's
+    /// <see cref="LineSegment.Length"/> alone. That extra knowledge is the whole reason this type exists
+    /// separately from a plain <see cref="LineSegment"/>.
     /// </para>
+    /// <para>The quantities it derives, with <c>c</c> = chord length and <c>r</c> = radius:</para>
     /// <list type="bullet">
-    ///   <item><b>Central angle</b> — the angle at the centre of the circle between the two ends.</item>
-    ///   <item><b>Arc length</b> — the curved distance along the circle's edge between the two ends.</item>
-    ///   <item><b>Sagitta</b> — how far the arc bulges away from the chord (the "height" of the arc).</item>
-    ///   <item><b>Apothem</b> — the straight distance from the circle's centre to the chord.</item>
+    ///   <item><see cref="CentralAngle"/> — the angle the chord subtends at the circle's centre.</item>
+    ///   <item><see cref="ArcLength"/> — the curved distance along the edge between the two ends.</item>
+    ///   <item><see cref="DistanceFromCentre"/> — the straight distance from the centre to the chord (the apothem).</item>
+    ///   <item><see cref="Sagitta"/> — how far the arc bulges out beyond the chord (the arc's height).</item>
     /// </list>
+    /// <para>
+    /// All four come from a single right-angled triangle: drop a perpendicular from the circle's centre
+    /// to the chord. It meets the chord at its midpoint, splitting things into a right triangle whose
+    /// hypotenuse is the radius <c>r</c>, one leg is the half-chord <c>c/2</c>, and the other leg is the
+    /// distance from the centre to the chord.
+    /// </para>
     /// </remarks>
     public class Chord : LineSegment
     {
@@ -57,17 +65,25 @@ namespace RP.Math
         /// <summary>The radius of the circle this chord belongs to.</summary>
         public double Radius { get; }
 
-        /// <summary>The diameter (widest possible chord) of the circle: twice the radius.</summary>
+        /// <summary>The diameter (the longest possible chord) of the circle: twice the radius.</summary>
         public double Diameter { get { return Radius * 2.0; } }
 
         /// <summary>
-        /// The angle at the centre of the circle subtended by the chord (the angle between the lines from
-        /// the centre out to each end of the chord).
+        /// The angle at the centre of the circle subtended by the chord — the angle between the two radii
+        /// drawn to the chord's ends.
         /// </summary>
         /// <remarks>
-        /// Worked out from <c>2 · asin( (length / 2) / radius )</c>. A chord cannot be longer than the
-        /// diameter; if the supplied length somehow exceeds it the ratio is clamped so the result stays
-        /// the straight (180°) angle rather than producing a non-number.
+        /// <para>
+        /// Maths: <c>θ = 2 · asin( (c / 2) / r )</c>, with <c>c</c> = chord length and <c>r</c> = radius.
+        /// </para>
+        /// <para>
+        /// Why: in the right triangle formed by the centre, the chord's midpoint and one end, the
+        /// half-chord <c>c/2</c> is the side opposite half the central angle, and the radius <c>r</c> is
+        /// the hypotenuse. So <c>sin(θ/2) = (c/2) / r</c>, giving <c>θ/2 = asin((c/2)/r)</c> and hence
+        /// <c>θ = 2·asin((c/2)/r)</c>. The ratio is clamped to the valid range −1..1 so a chord that is
+        /// (within rounding) the full diameter resolves to a straight 180° angle rather than producing a
+        /// non-number.
+        /// </para>
         /// </remarks>
         public Angle CentralAngle
         {
@@ -80,14 +96,25 @@ namespace RP.Math
             }
         }
 
-        /// <summary>The curved distance along the circle's edge between the two ends of the chord.</summary>
-        /// <remarks>Arc length = radius × central angle (with the angle measured in radians).</remarks>
+        /// <summary>
+        /// The curved distance along the circle's edge between the two ends of the chord.
+        /// </summary>
+        /// <remarks>
+        /// Maths: <c>arc = r · θ</c>, where <c>θ</c> is the <see cref="CentralAngle"/> in radians. This is
+        /// the definition of arc length: a full turn (<c>θ = 2π</c>) gives the whole circumference
+        /// <c>2πr</c>, and any fraction of a turn gives that same fraction of the circumference.
+        /// </remarks>
         public double ArcLength { get { return Radius * CentralAngle.Rad; } }
 
         /// <summary>
         /// The straight distance from the circle's centre to the chord (also called the apothem).
         /// </summary>
-        /// <remarks>Found with Pythagoras: <c>sqrt( radius² − (length / 2)² )</c>.</remarks>
+        /// <remarks>
+        /// Maths: <c>d = sqrt( r² − (c / 2)² )</c>. This is Pythagoras on the same right triangle: the
+        /// radius <c>r</c> is the hypotenuse and the half-chord <c>c/2</c> is one leg, so the remaining
+        /// leg — the centre-to-chord distance — is <c>sqrt(r² − (c/2)²)</c>. Guarded so a (rounding-error)
+        /// negative under the root returns 0 rather than a non-number.
+        /// </remarks>
         public double DistanceFromCentre
         {
             get
@@ -100,16 +127,21 @@ namespace RP.Math
 
         /// <summary>
         /// The height of the arc above the chord (the sagitta) — how far the curved edge bulges away from
-        /// the straight chord at its middle.
+        /// the straight chord, measured at the chord's midpoint.
         /// </summary>
-        /// <remarks>Sagitta = radius − distance-from-centre.</remarks>
+        /// <remarks>
+        /// Maths: <c>sagitta = r − d</c>, where <c>d</c> is the <see cref="DistanceFromCentre"/>. Going
+        /// from the centre out to the arc is a full radius <c>r</c>; the chord sits <c>d</c> of the way
+        /// out; so the gap left between the chord and the arc is <c>r − d</c>. ("Sagitta" is Latin for
+        /// arrow — the chord is the bow, this height is the drawn arrow.)
+        /// </remarks>
         public double Sagitta { get { return Radius - DistanceFromCentre; } }
 
         #endregion
 
         #region ToString
 
-        /// <summary>A string of the form <c>tail -> head (r=radius)</c>.</summary>
+        /// <summary>A string of the form <c>tail -&gt; head (r=radius)</c>.</summary>
         public override string ToString()
         {
             return string.Format("{0} -> {1} (r={2})", Tail, Head, Radius);
