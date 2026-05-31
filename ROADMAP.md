@@ -38,9 +38,13 @@ Every rich type should aim to provide:
 
 | Tier | Types |
 | --- | --- |
-| **Rich (done)** | `Vector`, `Angle`, `Matrix`, `Quaternion`, `Rotation`, `Attitude`, `Pose`, `Plane` |
+| **Rich (done)** | `Vector`, `Angle`, `Matrix`, `Quaternion`, `Rotation`, `Attitude`, `Pose`, `Plane`, `Box`, `Sphere`, `Circle` |
 | **Moderate** | `Axis`, `LineSegment` |
-| **Stub (data only)** | `Rectangle`, `Ray`, `Chord`, `OrthogonalAxis` |
+| **Stub (data only)** | `Rectangle` (legacy 2D), `Ray`, `Chord`, `OrthogonalAxis` |
+
+Geometry foundation in place: `IShape` / `IPlanarShape` / `ISolidShape` contracts (split planar-vs-solid,
+both 3D); `Box` (axis-aligned bounding volume) is the shared `BoundingBox` type; `Sphere` (solid) and
+`Circle` (planar) are the first two shapes, centre-anchored per the convention.
 | **Dormant** | `VectorPair` (fully commented out) |
 
 Orientation is now layered as intended: `Rotation` (Euler X/Y/Z) and `Attitude` (yaw/pitch/roll) are the
@@ -226,12 +230,14 @@ both contracts — build it alongside the first shape.
   `Vector3.cs` public API exactly; this genuinely extends it.
 
 **Phase 2 — Geometry shapes (headline goal)**
-- Add **`Box`** (axis-aligned bounds) — the `BoundingBox` return type.
-- Define `IPlanarShape` / `ISolidShape`.
-- Promote `LineSegment`, `Ray`, `Chord` to full rich types (closest point, intersections, parametric
-  evaluation, equality, `ToString`).
-- Build the centre-anchored shape family — planar first (`Circle`, `Rectangle`, `Triangle`, `Ellipse`),
-  then solid (`Sphere`, `Box` ops). Each implements its contract and the Vector model.
+- `Box` ✅ done (axis-aligned bounds; centre/size + min/max forms, contains/intersect/union/closest
+  point, the shared `BoundingBox` return type).
+- `IShape` / `IPlanarShape` / `ISolidShape` ✅ defined.
+- `Sphere` ✅ (solid) and `Circle` ✅ (planar) — first shapes, fully tested.
+- Still to do: promote `LineSegment`, `Ray`, `Chord` to full rich types (closest point, intersections,
+  parametric evaluation — they can delegate to `Plane`'s parametric intersection); add more shapes —
+  planar `Rectangle` (centre + orientation + size, replacing the legacy 2D stub), `Triangle`, `Ellipse`;
+  add `Pose`-based placement helpers (`TransformedBy`) once a shape needs full orientation.
 
 **Phase 3 — Queries + polish**
 - Cross-shape queries: intersection/overlap, distance, closest point, bounding volumes.
