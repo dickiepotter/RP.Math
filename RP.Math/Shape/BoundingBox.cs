@@ -6,19 +6,37 @@ namespace RP.Math
     using Math = System.Math;
 
     /// <summary>
-    /// An immutable axis-aligned bounding box (AABB) in 3D space, defined by its minimum and maximum
-    /// corners. Used as the bounding volume returned by shapes, and as a simple box solid in its own right.
+    /// A <b>bounding box</b>: an upright (not tilted) rectangular block in 3D space — like a cardboard
+    /// box, a brick, or a room — described by two opposite corners.
     /// </summary>
     /// <remarks>
-    /// Follows the <see cref="Vector"/> design: an immutable value type with static and instance forms,
-    /// tolerance-aware equality and formatting. The box is canonically centre-described through
-    /// <see cref="Center"/> and <see cref="Size"/>, but stored as <see cref="Min"/>/<see cref="Max"/>
-    /// corners (the natural form for an axis-aligned box). The constructor sorts the supplied corners so
+    /// <para>
+    /// <b>What it is.</b> A bounding box is the 3D equivalent of a rectangle. It is "axis-aligned", which
+    /// means its sides line up squarely with the X, Y and Z axes — it is never rotated at an angle. Because
+    /// it cannot tilt, the whole box is fully described by just two points: <see cref="Min"/> (the corner
+    /// with the smallest x, y and z) and <see cref="Max"/> (the corner with the largest x, y and z).
+    /// Everything else — width, height, depth, centre — is worked out from those two corners.
+    /// </para>
+    /// <para>
+    /// <b>What it is for.</b> Its main job is to <i>wrap around</i> something else: the smallest upright
+    /// box that completely contains a more complicated shape (for example a <see cref="Sphere"/> or a
+    /// <see cref="Circle"/>). This gives a very cheap way to ask rough questions — "is this point anywhere
+    /// near the shape?" or "could these two shapes possibly be touching?" — using only simple
+    /// less-than/greater-than comparisons, before doing any slower, exact maths. That is why every shape
+    /// can report its <c>BoundingBox</c>.
+    /// </para>
+    /// <para>
+    /// <b>Why upright (axis-aligned)?</b> Keeping the box un-tilted makes the maths simple enough to read:
+    /// testing whether a point is inside is just "is its x between Min.X and Max.X, its y between Min.Y and
+    /// Max.Y, and its z between Min.Z and Max.Z". No rotation or trigonometry is involved.
+    /// </para>
+    /// Follows the library's value-type design: an immutable struct with static and instance forms,
+    /// tolerance-aware equality and formatting. The constructor sorts the supplied corners so
     /// <see cref="Min"/> is always component-wise less than or equal to <see cref="Max"/>.
     /// </remarks>
     /// <author>Richard Potter BSc(Hons)</author>
     [Serializable]
-    public struct Box : IEquatable<Box>, IFormattable
+    public struct BoundingBox : IEquatable<BoundingBox>, IFormattable
     {
         #region Fields
 
@@ -30,10 +48,10 @@ namespace RP.Math
         #region Constructors
 
         /// <summary>
-        /// Construct an axis-aligned box from two opposite corners. The corners are sorted per-axis, so
-        /// either order (or any diagonal pair) yields the same box.
+        /// Construct a bounding box from two opposite corners. The corners are sorted per-axis, so either
+        /// order (or any diagonal pair) yields the same box.
         /// </summary>
-        public Box(Vector corner1, Vector corner2)
+        public BoundingBox(Vector corner1, Vector corner2)
         {
             this.min = new Vector(
                 Math.Min(corner1.X, corner2.X),
@@ -50,7 +68,7 @@ namespace RP.Math
         #region Constants
 
         /// <summary>The empty box at the origin (min == max == origin), with zero size.</summary>
-        public static readonly Box Empty = new Box(new Vector(0, 0, 0), new Vector(0, 0, 0));
+        public static readonly BoundingBox Empty = new BoundingBox(new Vector(0, 0, 0), new Vector(0, 0, 0));
 
         #endregion
 
@@ -58,7 +76,7 @@ namespace RP.Math
 
         /// <summary>Construct a box from its centre and full size (width, height, depth) along each axis.</summary>
         /// <exception cref="ArgumentException">Thrown if any size component is negative.</exception>
-        public static Box FromCenterSize(Vector center, Vector size)
+        public static BoundingBox FromCenterSize(Vector center, Vector size)
         {
             if (size.X < 0 || size.Y < 0 || size.Z < 0)
             {
@@ -66,20 +84,20 @@ namespace RP.Math
             }
 
             Vector half = size / 2.0;
-            return new Box(center - half, center + half);
+            return new BoundingBox(center - half, center + half);
         }
 
         /// <summary>Construct a box from its min and max corners (corners are sorted defensively).</summary>
-        public static Box FromMinMax(Vector min, Vector max)
+        public static BoundingBox FromMinMax(Vector min, Vector max)
         {
-            return new Box(min, max);
+            return new BoundingBox(min, max);
         }
 
         /// <summary>
-        /// The smallest axis-aligned box containing all of the supplied points. Throws if no points are given.
+        /// The smallest bounding box containing all of the supplied points. Throws if no points are given.
         /// </summary>
         /// <exception cref="ArgumentException">Thrown if <paramref name="points"/> is null or empty.</exception>
-        public static Box FromPoints(params Vector[] points)
+        public static BoundingBox FromPoints(params Vector[] points)
         {
             if (points == null || points.Length == 0)
             {
@@ -94,7 +112,7 @@ namespace RP.Math
                 hi = hi.ComponentMax(points[i]);
             }
 
-            return new Box(lo, hi);
+            return new BoundingBox(lo, hi);
         }
 
         #endregion
@@ -178,13 +196,13 @@ namespace RP.Math
         }
 
         /// <summary>Whether this box fully contains <paramref name="other"/>.</summary>
-        public bool Contains(Box other)
+        public bool Contains(BoundingBox other)
         {
             return this.Contains(other.Min) && this.Contains(other.Max);
         }
 
         /// <summary>Whether this box overlaps <paramref name="other"/> (touching counts as intersecting).</summary>
-        public bool Intersects(Box other)
+        public bool Intersects(BoundingBox other)
         {
             return this.min.X <= other.Max.X && this.max.X >= other.Min.X
                 && this.min.Y <= other.Max.Y && this.max.Y >= other.Min.Y
@@ -195,7 +213,7 @@ namespace RP.Math
         /// The overlapping region of two boxes. Returns true and the intersection box when they overlap;
         /// false (with <paramref name="result"/> = <see cref="Empty"/>) when they are disjoint.
         /// </summary>
-        public bool TryIntersect(Box other, out Box result)
+        public bool TryIntersect(BoundingBox other, out BoundingBox result)
         {
             if (!this.Intersects(other))
             {
@@ -203,20 +221,20 @@ namespace RP.Math
                 return false;
             }
 
-            result = new Box(this.min.ComponentMax(other.Min), this.max.ComponentMin(other.Max));
+            result = new BoundingBox(this.min.ComponentMax(other.Min), this.max.ComponentMin(other.Max));
             return true;
         }
 
         /// <summary>The smallest box containing both this box and <paramref name="other"/>.</summary>
-        public Box Union(Box other)
+        public BoundingBox Union(BoundingBox other)
         {
-            return new Box(this.min.ComponentMin(other.Min), this.max.ComponentMax(other.Max));
+            return new BoundingBox(this.min.ComponentMin(other.Min), this.max.ComponentMax(other.Max));
         }
 
         /// <summary>The smallest box containing this box and <paramref name="point"/>.</summary>
-        public Box Encapsulate(Vector point)
+        public BoundingBox Encapsulate(Vector point)
         {
-            return new Box(this.min.ComponentMin(point), this.max.ComponentMax(point));
+            return new BoundingBox(this.min.ComponentMin(point), this.max.ComponentMax(point));
         }
 
         /// <summary>The point on or inside the box closest to <paramref name="point"/>.</summary>
@@ -236,16 +254,16 @@ namespace RP.Math
         #region Transformation (returns a new box)
 
         /// <summary>A copy of the box translated by <paramref name="offset"/>.</summary>
-        public Box Translate(Vector offset)
+        public BoundingBox Translate(Vector offset)
         {
-            return new Box(this.min + offset, this.max + offset);
+            return new BoundingBox(this.min + offset, this.max + offset);
         }
 
         /// <summary>A copy of the box grown outward on every side by <paramref name="amount"/> (negative shrinks it).</summary>
-        public Box Expand(double amount)
+        public BoundingBox Expand(double amount)
         {
             Vector a = new Vector(amount, amount, amount);
-            return new Box(this.min - a, this.max + a);
+            return new BoundingBox(this.min - a, this.max + a);
         }
 
         #endregion
@@ -263,13 +281,13 @@ namespace RP.Math
         #region Operators
 
         /// <summary>Component-wise equality of the min and max corners.</summary>
-        public static bool operator ==(Box b1, Box b2)
+        public static bool operator ==(BoundingBox b1, BoundingBox b2)
         {
             return b1.Min == b2.Min && b1.Max == b2.Max;
         }
 
         /// <summary>Component-wise inequality of the min and max corners.</summary>
-        public static bool operator !=(Box b1, Box b2)
+        public static bool operator !=(BoundingBox b1, BoundingBox b2)
         {
             return !(b1 == b2);
         }
@@ -281,17 +299,17 @@ namespace RP.Math
         /// <summary>Equality with another object.</summary>
         public override bool Equals(object? other)
         {
-            return other is Box b && this.Equals(b);
+            return other is BoundingBox b && this.Equals(b);
         }
 
         /// <summary>Equality with another box (by corners).</summary>
-        public bool Equals(Box other)
+        public bool Equals(BoundingBox other)
         {
             return this == other;
         }
 
         /// <summary>Equality with another box within an absolute tolerance on the corner components.</summary>
-        public bool Equals(Box other, double tolerance)
+        public bool Equals(BoundingBox other, double tolerance)
         {
             return this.min.Equals(other.Min, tolerance) && this.max.Equals(other.Max, tolerance);
         }
@@ -328,7 +346,7 @@ namespace RP.Math
 
         #region Messages
 
-        private const string NEGATIVE_SIZE = "Box size cannot be negative on any axis.";
+        private const string NEGATIVE_SIZE = "Bounding box size cannot be negative on any axis.";
         private const string NO_POINTS = "At least one point is required to build a bounding box.";
 
         #endregion

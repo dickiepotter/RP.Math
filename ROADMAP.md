@@ -38,14 +38,15 @@ Every rich type should aim to provide:
 
 | Tier | Types |
 | --- | --- |
-| **Rich (done)** | `Vector`, `Angle`, `Matrix`, `Quaternion`, `Rotation`, `Attitude`, `Pose`, `Plane`, `Box`, `Sphere`, `Circle` |
+| **Rich (done)** | `Vector`, `Angle`, `Matrix`, `Quaternion`, `Rotation`, `Attitude`, `Pose`, `Plane`, `BoundingBox`, `Sphere`, `Circle` |
 | **Moderate** | `Axis`, `LineSegment` |
 | **Stub (data only)** | `Rectangle` (legacy 2D), `Ray`, `Chord`, `OrthogonalAxis` |
+| **Dormant** | `VectorPair` (fully commented out) |
 
 Geometry foundation in place: `IShape` / `IPlanarShape` / `ISolidShape` contracts (split planar-vs-solid,
-both 3D); `Box` (axis-aligned bounding volume) is the shared `BoundingBox` type; `Sphere` (solid) and
-`Circle` (planar) are the first two shapes, centre-anchored per the convention.
-| **Dormant** | `VectorPair` (fully commented out) |
+both 3D); `BoundingBox` (an upright 3D rectangular block — the smallest such block that wraps a shape) is
+the shared bounding type; `Sphere` (solid) and `Circle` (planar) are the first two shapes, centre-anchored
+per the convention.
 
 Orientation is now layered as intended: `Rotation` (Euler X/Y/Z) and `Attitude` (yaw/pitch/roll) are the
 human-friendly front doors; both convert to/from `Quaternion`, which is the robust internal form. `Pose`
@@ -119,7 +120,7 @@ consistent:
 
 The origin **does not change arbitrarily per shape** — it follows one rule:
 
-- **Area / volume shapes are centre-anchored.** Circle, Ellipse, Rectangle, Box, Sphere, RegularPolygon
+- **Area / volume shapes are centre-anchored.** Circle, Ellipse, Rectangle, BoundingBox, Sphere, RegularPolygon
   → the canonical local origin is the **geometric centre**. Triangle / Polygon → the **area centroid**.
   This is the maths/CAD/engine convention. (The **top-left / min-corner** origin used by *screen/UI*
   frameworks like `System.Drawing.Rectangle` or CSS exists only because pixel coordinates grow
@@ -142,7 +143,7 @@ factories* that convert to the canonical centre:
 var r = Rectangle.FromCenter(centerPose, width, height);   // canonical
 var r = Rectangle.FromCorners(p0, p1, p2);                  // convenience -> centre + plane
 Vector[] v = r.Vertices;        // derived from centre + size + orientation
-Box bb     = r.BoundingBox;     // derived, axis-aligned 3D box
+BoundingBox bb = r.BoundingBox; // derived: the upright 3D block that wraps the shape
 ```
 
 ## How "intrinsic" vs "placed" is modelled
@@ -172,7 +173,7 @@ public interface IPlanarShape
     Vector Centroid  { get; }   // the canonical origin, in world space
     Vector Normal    { get; }   // unit normal of the plane it lies in
     Plane  Plane     { get; }   // the supporting plane
-    Box    BoundingBox { get; } // axis-aligned 3D bounds
+    BoundingBox BoundingBox { get; } // the upright 3D block that wraps the shape
     bool Contains(Vector point);              // point on the plane and inside the outline
     bool Contains(Vector point, double tolerance);
 }
@@ -183,7 +184,7 @@ public interface ISolidShape
     double Volume      { get; }
     double SurfaceArea { get; }
     Vector Centroid    { get; }
-    Box    BoundingBox { get; }
+    BoundingBox BoundingBox { get; }
     bool Contains(Vector point);
     bool Contains(Vector point, double tolerance);
 }
@@ -194,8 +195,8 @@ equality/tolerance, `ToString`, operators where meaningful, and shape-specific m
 intersection, transforms). Transforms return a new shape (immutability): `Translate(Vector)`,
 `RotateAbout(Vector pivot, Quaternion)`, `Scale(double)`, `TransformedBy(Pose)`.
 
-`Box` (an axis-aligned 3D bounding box) is needed early because it is the `BoundingBox` return type for
-both contracts — build it alongside the first shape.
+`BoundingBox` (an upright 3D rectangular block — the smallest such block that wraps a shape) is needed
+early because it is the `BoundingBox` return type for both contracts — build it alongside the first shape.
 
 ---
 
@@ -230,8 +231,8 @@ both contracts — build it alongside the first shape.
   `Vector3.cs` public API exactly; this genuinely extends it.
 
 **Phase 2 — Geometry shapes (headline goal)**
-- `Box` ✅ done (axis-aligned bounds; centre/size + min/max forms, contains/intersect/union/closest
-  point, the shared `BoundingBox` return type).
+- `BoundingBox` ✅ done (an upright 3D rectangular block; centre/size + min/max corner forms,
+  contains/intersect/union/closest point; the shared bounding type returned by every shape).
 - `IShape` / `IPlanarShape` / `ISolidShape` ✅ defined.
 - `Sphere` ✅ (solid) and `Circle` ✅ (planar) — first shapes, fully tested.
 - Still to do: promote `LineSegment`, `Ray`, `Chord` to full rich types (closest point, intersections,

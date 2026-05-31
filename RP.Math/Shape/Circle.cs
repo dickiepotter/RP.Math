@@ -81,10 +81,10 @@ namespace RP.Math
         public double Perimeter { get { return 2.0 * Math.PI * this.radius; } }
 
         /// <summary>
-        /// The axis-aligned bounding box of the disc. The half-extent on each axis k is
-        /// r·√(1 − n_k²), the standard tight AABB of an oriented disc.
+        /// The bounding box of the disc. The half-extent on each axis k is r·√(1 − n_k²), the standard
+        /// tight box around a tilted disc.
         /// </summary>
-        public Box BoundingBox
+        public BoundingBox BoundingBox
         {
             get
             {
@@ -92,7 +92,7 @@ namespace RP.Math
                     this.radius * Math.Sqrt(Math.Max(0.0, 1.0 - (this.normal.X * this.normal.X))),
                     this.radius * Math.Sqrt(Math.Max(0.0, 1.0 - (this.normal.Y * this.normal.Y))),
                     this.radius * Math.Sqrt(Math.Max(0.0, 1.0 - (this.normal.Z * this.normal.Z))));
-                return new Box(this.center - e, this.center + e);
+                return new BoundingBox(this.center - e, this.center + e);
             }
         }
 

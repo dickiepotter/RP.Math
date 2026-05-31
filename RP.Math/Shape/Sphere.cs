@@ -64,10 +64,10 @@ namespace RP.Math
         /// <summary>The surface area, 4·π·r².</summary>
         public double SurfaceArea { get { return 4.0 * Math.PI * this.radius * this.radius; } }
 
-        /// <summary>The axis-aligned bounding box of the sphere.</summary>
-        public Box BoundingBox
+        /// <summary>The bounding box of the sphere.</summary>
+        public BoundingBox BoundingBox
         {
-            get { return Box.FromCenterSize(this.center, new Vector(this.Diameter, this.Diameter, this.Diameter)); }
+            get { return BoundingBox.FromCenterSize(this.center, new Vector(this.Diameter, this.Diameter, this.Diameter)); }
         }
 
         #endregion

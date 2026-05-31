@@ -14,8 +14,8 @@ namespace RP.Math
         /// <summary>The geometric centre (the shape's canonical origin) in world space.</summary>
         Vector Centroid { get; }
 
-        /// <summary>The smallest axis-aligned <see cref="Box"/> that contains the shape.</summary>
-        Box BoundingBox { get; }
+        /// <summary>The smallest <see cref="BoundingBox"/> that contains the shape.</summary>
+        BoundingBox BoundingBox { get; }
 
         /// <summary>Whether <paramref name="point"/> lies on or within the shape.</summary>
         bool Contains(Vector point);
