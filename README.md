@@ -26,7 +26,7 @@ more.*
 - [Orientation: `Rotation`, `Attitude`, `Quaternion`](#orientation-rotation-attitude-quaternion)
 - [`Pose`](#pose)
 - [`Matrix`](#matrix)
-- [`Axis` and `OrthogonalAxis`](#axis-and-orthogonalaxis)
+- [`OrthogonalAxes` — coordinate conventions](#orthogonalaxes)
 - [Shapes: conceptual and placed](#shapes-conceptual-and-placed)
 - [Supporting numeric helpers](#supporting-numeric-helpers)
 - [Points of interest](#points-of-interest)
@@ -122,7 +122,7 @@ not exploding) result.
 | **`Quaternion`** | An orientation as a 4-component number. | The robust form: no gimbal lock, smooth interpolation. |
 | **`Pose`** | A position **and** an orientation together. | A rigid placement ("where" + "which way") in friendly form. |
 | **`Matrix`** | A 4×4 transformation matrix. | The general linear-algebra workhorse for transforms. |
-| **`Axis`** / **`OrthogonalAxis`** | A choice of axis convention (which way is up, right, forward). | Describe coordinate frames rather than positions. |
+| **`OrthogonalAxes`** | A coordinate-system convention (which way is up, right, far, and its handedness). | A constant label chosen per project — not a position or an orientation. |
 | **`Circle`**, **`Triangle`**, **`Rectangle`**, **`Ellipse`**, **`Annulus`**, **`Sector`** | *Conceptual* flat shapes — size and proportion only, no position. | Pure intrinsic geometry: area, perimeter, angles; comparable by size. |
 | **`Sphere`**, **`Cuboid`**, **`Cylinder`**, **`Cone`**, **`Capsule`**, **`Ellipsoid`**, **`Torus`** | *Conceptual* solids — size and proportion only, no position. | Pure intrinsic geometry: volume, surface area; comparable by size. |
 | **`Placed…`** (one per conceptual shape) | A conceptual shape **placed** in space by a `Pose`. | Add world-space maths: containment, closest point, line/ray hits. |
@@ -833,27 +833,112 @@ Vector moved = t * v;                               // apply the transform to a 
 
 ---
 
-## `Axis` and `OrthogonalAxis`
+## `OrthogonalAxes`
 
-These types describe *coordinate conventions* — which way is up, right and forward — rather than
-positions or directions in a fixed frame.
+An `OrthogonalAxes` is a **coordinate-system convention** — a constant that records, for a given project or
+ecosystem, *which way is which*: which Cartesian axis means right, which means up, which means
+forward, and which direction along each is positive. It answers the question "when this project says
+`y`, does it mean *up* or *into the screen*?"
 
-**`Axis`** is an immutable value type holding the alignment of each Cartesian axis (drawn from the
-`AxisAlignment` enum: `UP`/`DOWN`, `LEFT`/`RIGHT`, `FORWARD`/`BACKWARD`, with `NEAR`/`FAR` aliases). It
-rejects contradictory conventions (you cannot have two axes both meaning "up") and provides `Map`
-helpers to translate coordinates between a stored convention and a canonical right/up/far frame.
-`Axis.VE_Axis_Default` is the convention common to virtual environments such as OpenGL.
+Different worlds disagree, and that is the whole reason the type exists. OpenGL is y-up and
+right-handed; Direct3D is y-up and left-handed; Blender and most CAD/engineering maths are z-up;
+Unreal is z-up and left-handed. An `OrthogonalAxes` pins that choice down in one immutable value so the rest of
+your maths never has to guess.
 
-**`OrthogonalAxis`** holds three mutually perpendicular basis vectors — `Right`, `Up`, `Forward` — and
-verifies on construction that they really are orthogonal. Its static helpers reconstruct a missing
-basis vector from the other two for both left- and right-handed conventions (`LhsUp`/`RhsUp`,
-`LhsRight`/`RhsRight`, `LhsForward`/`RhsForward`) using the cross product.
+**It is a label, not a motion.** An `OrthogonalAxes` is meant to be chosen once, at the start, and handed to any
+function that needs to know your frame. It never gets rotated — arbitrary orientations are the job of
+[`Quaternion`](#orientation-rotation-attitude-quaternion) and [`Pose`](#pose). (This single type
+replaces two earlier ones: a label-only `Axis` and a free-vector `OrthogonalAxis` that — by storing
+three arbitrary vectors — let you build skewed, non-unit, meaningless "axes". Merging them and keeping
+only genuine conventions is what makes a bad frame impossible to construct. The name is the old
+`OrthogonalAxis` corrected to the plural it always should have been: it describes a *set* of axes, not
+one — and so does not collide with the single direction vector that an axis–angle rotation
+(`Quaternion.FromAxisAngle`) calls an "axis".)
 
-> **Early-state, read with care.** These two are the least finished types in the library. A handful of
-> `OrthogonalAxis` rotation helpers (`Yaw`, `Pitch`, `Roll`, `Rotate`) deliberately throw
-> `NotImplementedException` rather than guess at an implementation, because the intended per-basis
-> rotation depends on an axis convention the type does not yet define. The `NEAR`/`FAR` versus
-> `FORWARD`/`BACKWARD` naming is also mid-rename. Treat these as a work in progress.
+### How a convention is built
+
+Each of the three Cartesian axes is given a role from one of the three **opposed pairs**:
+
+- `UP` / `DOWN`
+- `LEFT` / `RIGHT`
+- `NEAR` / `FAR`
+
+```csharp
+var openGl = new OrthogonalAxes(AxisAlignment.RIGHT, AxisAlignment.UP, AxisAlignment.NEAR);
+```
+
+The **sign** is carried by *which* member of the pair you choose: `Y = UP` means +y is up; `Y = DOWN`
+means +y is down (so up is −y). `Z = FAR` means +z points into the scene; `Z = NEAR` means +z points
+back toward the viewer.
+
+A convention must use **each pair exactly once** — so two axes can never both mean "up", and no pair
+can be left out. With three axes and three pairs, simply forbidding duplicates is enough to guarantee a
+complete, non-contradictory frame, which is why a meaningless `OrthogonalAxes` cannot be constructed at all.
+
+> **Why `NEAR`/`FAR` and not `FORWARD`/`BACKWARD`?** `near` and `far` are *positional* labels — they
+> say where a thing **is**, just like `up`/`down` and `left`/`right`. `forward`/`backward` carry a
+> sense of **motion**, which belongs to a velocity or a rotation, not to a fixed frame. Naming all
+> three pairs as positional opposites keeps the type consistent in kind. (`far` = into the scene, away
+> from the viewer; `near` = toward the viewer.)
+
+### The basis vectors and handedness
+
+From the labels alone, an `OrthogonalAxes` derives the signed unit vectors `Right`, `Up` and `Forward` (forward
+being the *far* direction — into the scene), and its `Handedness`:
+
+```csharp
+OrthogonalAxes.OpenGL.Forward;      // (0, 0, -1) — far is -z, because z is NEAR
+OrthogonalAxes.OpenGL.Handedness;   // Handedness.Right
+```
+
+These are *derived*, so they can never drift out of step with the labels.
+
+**Handedness, in one gesture.** Point your right hand's fingers along `Right` and curl them toward
+`Up`; your thumb gives the right-handed third direction. In numbers:
+
+```
+X × Y = (1, 0, 0) × (0, 1, 0) = (0, 0, 1) = +Z
+```
+
+With right = +x and up = +y, the right-hand rule puts the third axis at +z. So whether the *far*
+direction is +z or −z is exactly what decides handedness:
+
+| Far direction (with right = +x, up = +y) | Handedness |
+|------------------------------------------|------------|
+| far = −z | **right**-handed |
+| far = +z | **left**-handed |
+
+That single fact is the entire difference between OpenGL and Direct3D: same right, same up, opposite
+depth. (It is also why "OpenGL is right-handed, yet you look down −z" is not a contradiction — the
+*axes* obey the right-hand rule with +z pointing toward you; the camera simply faces the other way.
+Where the camera looks is a rendering concern, not part of the convention.) The type computes
+handedness as the sign of `(Right × Up) · Forward` — negative is right-handed — so it is read off the
+geometry, never typed in by hand.
+
+### The predefined conventions
+
+There is deliberately **no default**. A project must name the convention it wants, because the right
+answer depends on the ecosystem the maths is feeding. The common systems are provided as constants;
+several share a frame, so the constants are intentional aliases:
+
+| Constant(s) | x | y | z | Up axis | Handed |
+|-------------|---|---|---|---------|--------|
+| `OrthogonalAxes.OpenGL`, `OrthogonalAxes.Maya`, `OrthogonalAxes.Godot`, `OrthogonalAxes.MathsYUp` | right | up | near | y | right |
+| `OrthogonalAxes.DirectX`, `OrthogonalAxes.Direct3D`, `OrthogonalAxes.Unity` | right | up | far | y | left |
+| `OrthogonalAxes.Blender`, `OrthogonalAxes.Max3ds`, `OrthogonalAxes.MathsZUp` | right | far | up | z | right |
+| `OrthogonalAxes.Unreal` | far | right | up | z | left |
+
+```csharp
+OrthogonalAxes.OpenGL.Z;    // NEAR  — +z toward the viewer
+OrthogonalAxes.DirectX.Z;   // FAR   — +z into the screen
+```
+
+### Translating between conventions
+
+The point of holding a convention as a value is to *feed it into maths that must respect it*.
+`OrthogonalAxes.Map` converts coordinates between a stored convention and a canonical right/up/far frame, so a
+function can take your `OrthogonalAxes`, map its inputs into the easy canonical frame, do the work once there,
+and map the result back — instead of branching on the convention in every method.
 
 ---
 
@@ -1073,8 +1158,10 @@ and has grown to cover the line family, planes, angles, the orientation types, p
 all in the spirit of the original: small immutable values, rich and well-explained mathematical
 functionality, clarity ahead of speed.
 
-It is an early-state, actively-developing project: the core numeric types are well covered by tests,
-while a few helpers (notably the `OrthogonalAxis` rotations) are flagged as unfinished. The `Shape`
+It is an early-state, actively-developing project: the core numeric types are well covered by tests.
+The former `Axis` and `OrthogonalAxis` types are now merged into a single `OrthogonalAxes` convention,
+which carries the coordinate-frame logic they left unfinished and exposes the major systems (OpenGL,
+Direct3D, Unity, Unreal, Blender, …) as named constants. The `Shape`
 types follow a settled conceptual/placed split — `Circle`, `Sphere`, `Triangle`, `Rectangle`, `Ellipse`,
 `Annulus`, `Sector`, `Cuboid`, `Cylinder`, `Cone`, `Capsule`, `Ellipsoid` and `Torus`, each with a
 `Placed…` partner, plus the always-placed `PlacedPolygon` and `PlacedTetrahedron`.

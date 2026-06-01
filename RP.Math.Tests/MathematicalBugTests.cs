@@ -160,20 +160,20 @@ namespace RP.Math.Tests
         }
 
         // ------------------------------------------------------------------
-        // BUG 6 — Axis.ToString() throws NullReferenceException.
+        // BUG 6 (fixed) — OrthogonalAxes.ToString() used to throw NullReferenceException.
         //
-        // Axis.cs:391-393  ToString()  calls  ToString(null, null).
-        // Axis.cs:404      guards with  if (format != null || format != "")  — a tautology
-        // (no string is simultaneously non-null AND equal to ""), so the branch is always
-        // entered, and format[0] dereferences the null format, throwing.
-        // The condition should be a logical AND.
+        // ToString() calls ToString(null, null), which guarded with
+        //   if (format != null || format != "")   — a tautology (no string is simultaneously
+        // non-null AND equal to ""), so the branch was always entered and format[0] dereferenced
+        // the null format. The guard is now string.IsNullOrEmpty(format); this test guards against
+        // regression.
         // ------------------------------------------------------------------
         [TestMethod, TestCategory("Bug")]
-        public void AxisToString_DefaultFormat_DoesNotThrow_Test()
+        public void OrthogonalAxesToString_DefaultFormat_DoesNotThrow_Test()
         {
-            var axis = new Axis(AxisAlignment.RIGHT, AxisAlignment.UP, AxisAlignment.FORWARD);
+            var axes = new OrthogonalAxes(AxisAlignment.RIGHT, AxisAlignment.UP, AxisAlignment.FAR);
 
-            Action act = () => axis.ToString();
+            Action act = () => axes.ToString();
 
             act.Should().NotThrow();
         }
