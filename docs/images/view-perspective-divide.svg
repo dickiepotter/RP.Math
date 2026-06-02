@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="300" viewBox="0 0 560 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="pd-axis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+    <marker id="pd-ray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f6feb"/></marker>
+  </defs>
+  <rect x="0.5" y="0.5" width="559" height="299" rx="12" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="20" y="30" font-size="16" font-weight="600" fill="#24292f">The perspective divide is just similar triangles</text>
+
+  <!-- the two similar triangles (share the eye corner) -->
+  <path d="M70,250 L460,110 L460,250 Z" fill="#1f6feb" fill-opacity="0.06"/>
+  <path d="M70,250 L190,207 L190,250 Z" fill="#1f6feb" fill-opacity="0.12"/>
+
+  <!-- depth axis -->
+  <line x1="70" y1="250" x2="520" y2="250" stroke="#57606a" stroke-width="1.5" marker-end="url(#pd-axis)"/>
+  <text x="500" y="268" font-size="12" fill="#57606a">−Z (depth)</text>
+
+  <!-- image plane at the near distance -->
+  <line x1="190" y1="250" x2="190" y2="120" stroke="#57606a" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="190" y="113" font-size="11.5" fill="#57606a" text-anchor="middle">image plane</text>
+
+  <!-- the ray from the eye through P -->
+  <line x1="70" y1="250" x2="460" y2="110" stroke="#1f6feb" stroke-width="2.5" marker-end="url(#pd-ray)"/>
+
+  <!-- P and its real across-distance x -->
+  <line x1="460" y1="250" x2="460" y2="110" stroke="#cf222e" stroke-width="3"/>
+  <text x="468" y="180" font-size="13" fill="#cf222e" font-weight="600">x</text>
+  <circle cx="460" cy="110" r="4" fill="#24292f"/>
+  <text x="468" y="108" font-size="13" fill="#24292f" font-weight="600">P</text>
+
+  <!-- projected height x' on the image plane -->
+  <line x1="190" y1="250" x2="190" y2="207" stroke="#1a7f37" stroke-width="4"/>
+  <text x="168" y="232" font-size="13" fill="#1a7f37" font-weight="600" text-anchor="end">x&#8242;</text>
+
+  <!-- eye -->
+  <circle cx="70" cy="250" r="5" fill="#24292f"/>
+  <text x="44" y="246" font-size="13" fill="#24292f" font-weight="600">eye</text>
+
+  <!-- right-angle marks -->
+  <path d="M452,250 L452,242 L460,242" fill="none" stroke="#57606a" stroke-width="1"/>
+  <path d="M182,250 L182,242 L190,242" fill="none" stroke="#57606a" stroke-width="1"/>
+
+  <!-- distance brackets n and d -->
+  <g stroke="#57606a" stroke-width="1">
+    <line x1="70" y1="270" x2="190" y2="270"/><line x1="70" y1="266" x2="70" y2="274"/><line x1="190" y1="266" x2="190" y2="274"/>
+  </g>
+  <text x="130" y="283" font-size="12" fill="#57606a" text-anchor="middle">n</text>
+  <g stroke="#57606a" stroke-width="1">
+    <line x1="70" y1="288" x2="460" y2="288"/><line x1="70" y1="284" x2="70" y2="292"/><line x1="460" y1="284" x2="460" y2="292"/>
+  </g>
+  <text x="265" y="299" font-size="12" fill="#57606a" text-anchor="middle">d</text>
+
+  <!-- the formula -->
+  <text x="300" y="56" font-size="14" fill="#24292f" font-weight="600">x&#8242; / n = x / d</text>
+  <text x="300" y="76" font-size="13" fill="#57606a">so x&#8242; = x &#183; n / d — divide by depth, and far shrinks</text>
+</svg>

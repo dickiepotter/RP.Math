@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="300" viewBox="0 0 560 300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ob-axis" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+  </defs>
+  <rect x="0.5" y="0.5" width="559" height="299" rx="12" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="20" y="30" font-size="16" font-weight="600" fill="#24292f">Orthographic: the view volume is a box</text>
+  <text x="20" y="50" font-size="12" fill="#57606a">No tip, so depth no longer changes size: equal real sizes (red) stay equal on screen.</text>
+
+  <!-- box body -->
+  <rect x="205" y="95" width="270" height="150" fill="#1f6feb" fill-opacity="0.07" stroke="none"/>
+  <!-- top and bottom edges (parallel — no convergence) -->
+  <line x1="205" y1="95" x2="475" y2="95" stroke="#1f6feb" stroke-width="1.5"/>
+  <line x1="205" y1="245" x2="475" y2="245" stroke="#1f6feb" stroke-width="1.5"/>
+
+  <!-- near plane -->
+  <line x1="205" y1="95" x2="205" y2="245" stroke="#1a7f37" stroke-width="2.5"/>
+  <text x="205" y="263" font-size="12" fill="#1a7f37" text-anchor="middle" font-weight="600">near plane</text>
+  <!-- far plane -->
+  <line x1="475" y1="95" x2="475" y2="245" stroke="#8250df" stroke-width="2.5"/>
+  <text x="475" y="263" font-size="12" fill="#8250df" text-anchor="middle" font-weight="600">far plane</text>
+
+  <!-- equal real-size objects, equal on screen -->
+  <line x1="245" y1="150" x2="245" y2="190" stroke="#cf222e" stroke-width="4"/>
+  <line x1="430" y1="150" x2="430" y2="190" stroke="#cf222e" stroke-width="4"/>
+
+  <!-- eye -->
+  <circle cx="70" cy="170" r="5" fill="#24292f"/>
+  <text x="42" y="166" font-size="13" fill="#24292f" font-weight="600">eye</text>
+
+  <!-- gaze axis -->
+  <line x1="70" y1="170" x2="520" y2="170" stroke="#57606a" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ob-axis)"/>
+  <text x="498" y="188" font-size="12" fill="#57606a">−Z</text>
+</svg>

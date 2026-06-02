@@ -30,6 +30,7 @@ more.*
 - [Orientation: `Rotation`, `Attitude`, `Quaternion`](#orientation-rotation-attitude-quaternion)
 - [`Pose`](#pose)
 - [`Matrix`](#matrix)
+- [The camera: view and projection matrices](#the-camera-view-and-projection-matrices)
 - [`OrthogonalAxes` — coordinate conventions](#orthogonalaxes)
 - [Curves: `Bezier`, `Hermite`, `CatmullRom`](#curves-bezier-hermite-catmullrom)
 - [Shapes: conceptual and placed](#shapes-conceptual-and-placed)
@@ -125,12 +126,10 @@ graph TD
     V["Vector<br/>(x, y, z) — point or direction"]
 
     subgraph lines["Line family — differ only in where they may stop"]
-        direction LR
         L["Line<br/>no ends"] --- R["Ray<br/>one end"] --- S["LineSegment<br/>two ends"] --- C["Chord<br/>ends on a circle"]
     end
 
     subgraph orient["Orientation — same turn, different encodings"]
-        direction LR
         Q["Quaternion"] --- AA["AxisAngle"] --- Rot["Rotation<br/>(Euler X/Y/Z)"] --- M["Matrix"]
         Att["Attitude<br/>(yaw/pitch/roll)"]
     end
@@ -1032,6 +1031,185 @@ Vector local  = world.Inverse() * worldPoint;     // map a world point back into
 bool ok       = world.IsInvertible;                // false only when the determinant is zero
 ```
 
+**View and projection.** `Matrix` also builds the **camera** matrices — `LookAt`, `PerspectiveFieldOfView`,
+`Orthographic` — that turn a 3D scene into a flat picture, together with `Transform` (the perspective
+divide). These have their own illustrated walk-through in
+[The camera: view and projection matrices](#the-camera-view-and-projection-matrices) below.
+
+---
+
+## The camera: view and projection matrices
+
+Everything so far has lived in **world space** — a fixed 3D stage where points, shapes and cameras all have
+coordinates. But a screen is **flat**. To draw the world you must answer one question: *if I stand here,
+look that way, and hold a rectangular frame up to the scene, where does each 3D point land on that 2D
+frame?* Answering it is the one place this library brushes against **rendering** — and because the maths is
+such a clean, classic piece of geometry, it is worth walking through slowly. (Turning the final coordinates
+into coloured pixels is your graphics API's job, not this library's.)
+
+The journey from an object to the screen is a short assembly line, and most steps are **one matrix multiply**:
+
+```mermaid
+graph LR
+    M["Model space<br/>(an object's own coordinates)"] -->|"model matrix"| W["World space<br/>(placed in the scene)"]
+    W -->|"view (LookAt)"| V["View space<br/>(camera at the origin, looking down −Z)"]
+    V -->|"projection"| C["Clip space<br/>(homogeneous — carries a w)"]
+    C -->|"÷ w  (Transform)"| N["Device coordinates<br/>(inside the −1…+1 clip cube)"]
+    N -->|"viewport — your graphics API"| S["Screen pixels"]
+    classDef lib fill:#dfe9ff,stroke:#4472c4,color:#222;
+    classDef ext fill:#eeeeee,stroke:#999999,color:#555555;
+    class V,C,N lib;
+    class M,W,S ext;
+```
+
+The blue steps — the view matrix, the projection, and the divide that follows — are what `Matrix` builds for
+you. The grey ends (placing each object in the world, and stretching the final cube across your window's
+pixels) belong to your application.
+
+### A convention, stated out loud
+
+View and projection are the corner of graphics where two perfectly sensible textbooks disagree — which way
+the camera looks, whether the depth runs 0→1 or −1→+1, whether the frame is left- or right-handed. There is
+no neutral answer, so rather than hide a choice, this library makes one and says it plainly. It is the same
+**right-handed, OpenGL convention** the rest of the documentation's pictures assume:
+
+> The camera sits at the origin of view space and looks down its own **−Z** axis, with **+X** to the right
+> and **+Y** up. Each projection squashes the visible region into a **clip cube** running from **−1 to +1**
+> on every axis — the near plane landing at z = −1 and the far plane at z = +1.
+
+(This is deliberately *not* expressed through [`OrthogonalAxes`](#orthogonalaxes): that type names the roles
+of the **world** axes, whereas these conventions are about **clip space** — a different thing. If you target
+a left-handed API, or one whose clip depth runs 0→1, these builders are the wrong tool, and the maths below
+shows exactly what would change.)
+
+### Step 1 — the view matrix: moving the world in front of the camera
+
+Here is the trick that makes cameras simple: **you never move the camera.** Instead you move the *entire
+world* so that the camera ends up at the origin, looking in a fixed direction. A photograph of a mountain,
+and a photograph taken by swinging the whole mountain in front of a bolted-down lens, are identical — so we
+choose the version that puts the camera somewhere predictable. The matrix that does this rearranging is the
+**view matrix**, and `LookAt` builds it from three friendly inputs:
+
+- **`eye`** — where the camera is, in world space.
+- **`target`** — a point it is aimed at.
+- **`up`** — roughly which way is "up" for the camera. It need not be exactly perpendicular to the gaze; it
+  is only a hint, used to decide how the camera is rolled.
+
+From those it constructs an **orthonormal basis** — three mutually perpendicular unit axes — for the camera:
+
+```mermaid
+graph TD
+    E["your inputs: eye, target, up"] --> F["forward = normalize(target − eye)"]
+    F --> R["right = normalize(forward × up)"]
+    R --> U["trueUp = right × forward<br/>(rebuilt square, so a tilted up hint still works)"]
+    U --> VM["View matrix<br/>rows: right, trueUp, −forward<br/>last column: −(each axis · eye)"]
+    classDef hi fill:#ffe9a8,stroke:#b8860b,color:#222;
+    class VM hi;
+```
+
+The `forward × up` cross product gives a vector perpendicular to both (the camera's `right`); a second cross
+product rebuilds a clean `up` exactly square to the other two — which is why a hastily-chosen up hint still
+yields a valid frame. Those three axes become the **rows** of the rotation part (they re-express any world
+direction in camera axes), and the last column shifts the eye to the origin. Because a right-handed camera
+looks down −Z, the forward axis goes in negated.
+
+```csharp
+Matrix view = Matrix.LookAt(eye: new Vector(0, 0, 5), target: Vector.Origin, up: Vector.YAxis);
+view.Transform(new Vector(0, 0, 5));   // the eye    -> (0, 0,  0): the camera is now at the origin
+view.Transform(Vector.Origin);          // the target -> (0, 0, -5): dead ahead, down -Z
+```
+
+`LookAt` refuses two impossible requests — an `eye` equal to the `target` (no direction to look in), and an
+`up` hint parallel to the gaze (no way to tell which way is up) — throwing rather than returning a broken
+matrix.
+
+### Step 2 — the projection: choosing the shape of "visible"
+
+The view matrix leaves the camera at the origin looking down −Z, but the world is still fully 3D and
+unbounded. A **projection matrix** does two jobs at once: it picks the region of space that is actually
+visible (the **view volume**) and squashes that region onto the standard clip cube. There are two shapes of
+view volume, and they give the two familiar looks.
+
+**Perspective** — the view volume is a **frustum**: a pyramid with its tip at the eye and its top sliced
+off. Something further away fills a smaller slice of your vision, so it looks smaller — the everyday look of
+eyes and cameras, where parallel railway lines appear to meet at the horizon.
+
+![Perspective view volume — a frustum, with a fixed real size filling less of the view further away](docs/images/view-perspective-frustum.svg)
+
+`PerspectiveFieldOfView(verticalFov, aspect, near, far)` is the everyday builder: give it how much it sees
+top-to-bottom (the vertical **field of view** angle), the **aspect** ratio width ÷ height of your window, and
+the **near**/**far** distances that cap the frustum at each end. (The general
+`PerspectiveOffCenter(left, right, bottom, top, near, far)` — the `glFrustum` form — allows a lopsided
+frustum, for stereo or tiled rendering; the field-of-view version is just its symmetric case.)
+
+**Orthographic** — the view volume is a plain **box**. With no tip, depth no longer changes size: a
+metre-wide object draws the same whether it is near or far. This is the look of engineering drawings, maps,
+and most 2D and isometric games.
+
+![Orthographic view volume — a box, where equal real sizes stay equal on screen](docs/images/view-orthographic-box.svg)
+
+`Orthographic(width, height, near, far)` builds a box centred on the gaze; `OrthographicOffCenter(left,
+right, bottom, top, near, far)` (the `glOrtho` form) places it freely.
+
+### The clever bit — homogeneous *w* and the perspective divide
+
+How can a single matrix multiply make distant things smaller? Plain matrix multiplication is **linear** — it
+can rotate, scale, shear, and (with the 4×4 trick) translate, but it cannot *divide*, and shrinking-with-depth
+is a division: an object at twice the distance should appear half as big. The way out is the fourth
+coordinate, **w** — the "homogeneous" coordinate that has quietly ridden along in every 4-vector.
+
+An ordinary point carries `w = 1`. A perspective matrix is built so that, instead of leaving `w` alone, it
+copies the point's **depth** into `w`. After the multiply you therefore hold `(x′, y′, z′, w′)` where `w′` is
+(near enough) *how far away the point was*. One final step — dividing all of them by `w′`, the **perspective
+divide** — turns that stored depth into real shrinkage:
+
+![The perspective divide as similar triangles: x prime over n equals x over d, so x prime equals x times n over d](docs/images/view-perspective-divide.svg)
+
+That last line is just **similar triangles** — the same ratio you met at school — and it is the whole secret
+of perspective: divide the across-screen position `x` by the depth `d`, and distant points (large `d`) are
+pulled in toward the centre. The matrix does the multiply; the divide finishes the job.
+
+This is why the projection matrices need their own apply method. The `*` operator **refuses** any result
+whose `w` is not 1 — it is meant for *affine* transforms, the moves that keep `w = 1` (translation, rotation,
+scaling, and the view matrix) — so it would throw on a perspective result. Use **`Transform(v)`** instead: it
+does the multiply *and* the perspective divide. For an affine matrix `w′` is already 1, so `Transform` and
+`*` agree — meaning you can reach for `Transform` whenever a projection might be involved and never be caught
+out.
+
+### The clip cube — what comes out
+
+After the divide, every visible point lands inside the **clip cube**: x, y and z each between −1 and +1.
+
+![The clip cube from (−1,−1,−1) to (+1,+1,+1): x and y give screen position, z gives depth](docs/images/view-clip-cube.svg)
+
+The x and y say where on the screen the point belongs; the z carries depth, so a renderer can tell which
+surface is in front when two land on the same pixel. Stretching this −1…+1 cube across your actual window in
+pixels — the *viewport* transform — is the final step, and the point at which this library hands over to your
+graphics API.
+
+### Putting it together
+
+The matrices compose by multiplication, right-to-left in the order a point travels — **model**, then
+**view**, then **projection** — and a single `Transform` carries a world point all the way to the clip cube:
+
+```csharp
+// One-time setup, per camera:
+Matrix view = Matrix.LookAt(eye, target, Vector.YAxis);
+Matrix proj = Matrix.PerspectiveFieldOfView(new Angle(60, AngleUnits.DEG), width / height, near: 0.1, far: 100);
+Matrix viewProjection = proj * view;                  // compose once…
+
+// …then, for each point in the world:
+Vector clip = viewProjection.Transform(worldPoint);   // Transform does the perspective divide
+
+bool onScreen = System.Math.Abs(clip.X) <= 1
+             && System.Math.Abs(clip.Y) <= 1
+             && System.Math.Abs(clip.Z) <= 1;          // inside the clip cube ⇒ visible
+```
+
+Because the perspective divide makes the same world step shrink with depth, a unit-wide object at the far
+plane covers far fewer screen units than one at the near plane — perspective foreshortening, falling straight
+out of the maths rather than bolted on.
+
 ---
 
 ## `OrthogonalAxes`
@@ -1246,14 +1424,12 @@ The shape types are built around one deliberate split: **what a shape *is*** is 
 
 ```mermaid
 graph LR
-    subgraph concept["Conceptual shape — size & proportion only"]
-        direction TB
+    subgraph concept["Conceptual shape — size and proportion only"]
         C1["Circle, Rectangle, Ellipse,<br/>Annulus, Sector, Triangle"]
         C2["Sphere, Cuboid, Cylinder, Cone,<br/>Capsule, Ellipsoid, Torus"]
     end
 
     subgraph placed["Placed shape — in the world"]
-        direction TB
         P1["PlacedCircle, PlacedRectangle, ..."]
         P2["PlacedSphere, PlacedCuboid, ..."]
     end
@@ -1725,6 +1901,8 @@ assumes a fixed up/right/forward. The `Shape`
 types follow a settled conceptual/placed split — `Circle`, `Sphere`, `Triangle`, `Rectangle`, `Ellipse`,
 `Annulus`, `Sector`, `Cuboid`, `Cylinder`, `Cone`, `Capsule`, `Ellipsoid` and `Torus`, each with a
 `Placed…` partner, plus the always-placed `PlacedPolygon` and `PlacedTetrahedron`. More recently the
-`Matrix` gained a true `Inverse`, `Quaternion` gained direction-based construction (`FromToRotation`,
-`LookRotation`), and two new families joined: the curves (`Bezier`, `Hermite`, `CatmullRom`) and the
-axis-aligned bounding volumes (`Box`, `BoundingSphere`).
+`Matrix` gained a true `Inverse` and right-handed view/projection builders (`LookAt`,
+`PerspectiveFieldOfView`, `Orthographic`) with a perspective-divide `Transform`; `Quaternion` gained
+direction-based construction (`FromToRotation`, `LookRotation`); `Plane` gained plane-plane intersection;
+every placed shape gained `DistanceTo`; and two new families joined: the curves (`Bezier`, `Hermite`,
+`CatmullRom`) and the axis-aligned bounding volumes (`Box`, `BoundingSphere`).

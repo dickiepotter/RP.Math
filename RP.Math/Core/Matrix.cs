@@ -257,6 +257,12 @@ namespace RP.Math
         private const string THREE_COMPONENTS           = "Transformation operation array arguments must have exactly three components (_x,_y,_z)";
         private const string NOT_HOMOGENEOUS            = "The product of a Matrix and a Vector does not resolve to a homogeneous vector e.g.(_x,_y,_z,1).";
         private const string SINGULAR                   = "Matrix is singular (its determinant is zero) and has no inverse.";
+        private const string LOOKAT_EYE_AT_TARGET        = "LookAt requires the eye and target to be different points (there is no view direction otherwise).";
+        private const string LOOKAT_UP_PARALLEL          = "LookAt requires the up hint not to be parallel to the view direction.";
+        private const string PERSPECTIVE_FOV             = "The vertical field of view must be greater than zero and less than 180 degrees.";
+        private const string PERSPECTIVE_ASPECT          = "The aspect ratio must be greater than zero.";
+        private const string FRUSTUM_PLANES              = "Near and far must satisfy 0 < near < far for a perspective frustum.";
+        private const string ORTHO_DEGENERATE            = "An orthographic volume must have left != right, bottom != top, and near != far.";
 
         #endregion
 
@@ -957,6 +963,159 @@ namespace RP.Math
                         {0       , 0        , 0, 1}
                     }
                 )
+            );
+        }
+
+        #endregion
+
+        #region View and projection
+
+        // These follow the right-handed, OpenGL convention used by the library's illustrations: the camera
+        // looks down its local -Z, and the projections map the view volume into a clip cube whose z runs
+        // from -1 (near) to +1 (far). They are column-vector matrices like the builders above, so they
+        // compose left-to-right (projection * view * model) and apply with Transform(v) / the * operator.
+
+        /// <summary>
+        /// Transform a point through this matrix <b>including the perspective divide</b> (the result's x, y, z
+        /// are divided by its homogeneous w). Use this with a projection matrix; the <c>*</c> operator cannot,
+        /// because it asserts the result stays affine (<c>w = 1</c>), which a perspective matrix breaks.
+        /// </summary>
+        /// <remarks>
+        /// Maths: a point <c>(x, y, z)</c> is carried as <c>(x, y, z, 1)</c>, multiplied to give
+        /// <c>(x', y', z', w')</c>, then "projected" back to 3D by dividing through by <c>w'</c> — the step
+        /// that makes distant things appear smaller. For an affine matrix <c>w'</c> is already 1, so this
+        /// agrees with the <c>*</c> operator; a <c>w'</c> of 0 (a direction at infinity) is returned undivided.
+        /// </remarks>
+        public Vector Transform(Vector v)
+        {
+            double x = (_vals[0, 0] * v.X) + (_vals[0, 1] * v.Y) + (_vals[0, 2] * v.Z) + _vals[0, 3];
+            double y = (_vals[1, 0] * v.X) + (_vals[1, 1] * v.Y) + (_vals[1, 2] * v.Z) + _vals[1, 3];
+            double z = (_vals[2, 0] * v.X) + (_vals[2, 1] * v.Y) + (_vals[2, 2] * v.Z) + _vals[2, 3];
+            double w = (_vals[3, 0] * v.X) + (_vals[3, 1] * v.Y) + (_vals[3, 2] * v.Z) + _vals[3, 3];
+
+            if (w == 0 || w == 1) return new Vector(x, y, z);
+            return new Vector(x / w, y / w, z / w);
+        }
+
+        /// <summary>
+        /// A right-handed <b>view</b> matrix that places the camera at <paramref name="eye"/> looking toward
+        /// <paramref name="target"/>, with <paramref name="up"/> as the upward hint. It transforms world
+        /// space into camera space, where the camera sits at the origin looking down its local −Z.
+        /// </summary>
+        /// <remarks>
+        /// Maths: build an orthonormal camera basis — <c>forward</c> from eye to target, <c>right =
+        /// forward × up</c>, and a corrected <c>up = right × forward</c> (so a non-perpendicular up hint still
+        /// works). The rotation part places those axes in the rows (it maps world directions onto the camera
+        /// axes), and the last column <c>−basis·eye</c> moves the eye to the origin. The forward axis is
+        /// negated because a right-handed camera looks down −Z.
+        /// </remarks>
+        /// <exception cref="ArgumentException">Thrown if eye equals target, or up is parallel to the view direction.</exception>
+        public static Matrix LookAt(Vector eye, Vector target, Vector up)
+        {
+            Vector toTarget = target - eye;
+            if (toTarget.IsZero()) throw new ArgumentException(LOOKAT_EYE_AT_TARGET);
+
+            Vector forward = toTarget.NormalizeOrDefault();
+            Vector rightRaw = forward.CrossProduct(up);
+            if (rightRaw.IsZero()) throw new ArgumentException(LOOKAT_UP_PARALLEL);
+
+            Vector right = rightRaw.NormalizeOrDefault();
+            Vector trueUp = right.CrossProduct(forward);
+
+            return new Matrix
+            (
+                new double[,]
+                {
+                    { right.X,     right.Y,     right.Z,    -right.DotProduct(eye)   },
+                    { trueUp.X,    trueUp.Y,    trueUp.Z,   -trueUp.DotProduct(eye)  },
+                    { -forward.X,  -forward.Y,  -forward.Z,  forward.DotProduct(eye) },
+                    { 0,           0,           0,           1                       }
+                }
+            );
+        }
+
+        /// <summary>
+        /// A right-handed <b>perspective</b> projection from a vertical field of view and aspect ratio
+        /// (width ÷ height). Distant objects shrink; the view volume becomes the clip cube. Apply it with
+        /// <see cref="Transform"/> (it produces a non-unit w). A special case of
+        /// <see cref="PerspectiveOffCenter"/> with a symmetric frustum.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if the field of view is not in (0, 180°), the aspect ratio is not positive, or the planes do not satisfy 0 &lt; near &lt; far.</exception>
+        public static Matrix PerspectiveFieldOfView(Angle verticalFieldOfView, double aspectRatio, double near, double far)
+        {
+            double fov = verticalFieldOfView.Rad;
+            if (fov <= 0 || fov >= System.Math.PI) throw new ArgumentOutOfRangeException(nameof(verticalFieldOfView), fov, PERSPECTIVE_FOV);
+            if (aspectRatio <= 0) throw new ArgumentOutOfRangeException(nameof(aspectRatio), aspectRatio, PERSPECTIVE_ASPECT);
+            if (near <= 0 || far <= near) throw new ArgumentOutOfRangeException(nameof(near), near, FRUSTUM_PLANES);
+
+            double top = near * System.Math.Tan(fov / 2.0);
+            double right = top * aspectRatio;
+            return PerspectiveOffCenter(-right, right, -top, top, near, far);
+        }
+
+        /// <summary>
+        /// A right-handed <b>perspective</b> projection for a general (possibly off-centre) frustum, given the
+        /// near-plane window <paramref name="left"/>/<paramref name="right"/>/<paramref name="bottom"/>/<paramref name="top"/>
+        /// and the <paramref name="near"/>/<paramref name="far"/> distances (the OpenGL <c>glFrustum</c> form).
+        /// Apply it with <see cref="Transform"/>.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if the window is degenerate or the planes do not satisfy 0 &lt; near &lt; far.</exception>
+        public static Matrix PerspectiveOffCenter(double left, double right, double bottom, double top, double near, double far)
+        {
+            if (near <= 0 || far <= near) throw new ArgumentOutOfRangeException(nameof(near), near, FRUSTUM_PLANES);
+            if (left == right || bottom == top) throw new ArgumentOutOfRangeException(nameof(left), ORTHO_DEGENERATE);
+
+            double rl = right - left;
+            double tb = top - bottom;
+            double fn = far - near;
+
+            return new Matrix
+            (
+                new double[,]
+                {
+                    { (2.0 * near) / rl, 0,                 (right + left) / rl,   0                              },
+                    { 0,                 (2.0 * near) / tb, (top + bottom) / tb,   0                              },
+                    { 0,                 0,                -(far + near) / fn,    -(2.0 * far * near) / fn         },
+                    { 0,                 0,                -1,                     0                              }
+                }
+            );
+        }
+
+        /// <summary>
+        /// A right-handed <b>orthographic</b> projection of a box centred on the view axis,
+        /// <paramref name="width"/> by <paramref name="height"/>, between the <paramref name="near"/> and
+        /// <paramref name="far"/> planes. Parallel lines stay parallel (no perspective foreshortening), so
+        /// it is affine and the <c>*</c> operator applies it directly.
+        /// </summary>
+        public static Matrix Orthographic(double width, double height, double near, double far)
+        {
+            return OrthographicOffCenter(-width / 2.0, width / 2.0, -height / 2.0, height / 2.0, near, far);
+        }
+
+        /// <summary>
+        /// A right-handed <b>orthographic</b> projection for a general (possibly off-centre) box, given its
+        /// <paramref name="left"/>/<paramref name="right"/>/<paramref name="bottom"/>/<paramref name="top"/>
+        /// extents and the <paramref name="near"/>/<paramref name="far"/> distances (the OpenGL <c>glOrtho</c>
+        /// form). It maps the box onto the clip cube by scaling and shifting each axis independently.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if any pair of bounds is equal (a zero-thickness volume).</exception>
+        public static Matrix OrthographicOffCenter(double left, double right, double bottom, double top, double near, double far)
+        {
+            if (left == right || bottom == top || near == far) throw new ArgumentOutOfRangeException(nameof(left), ORTHO_DEGENERATE);
+
+            double rl = right - left;
+            double tb = top - bottom;
+            double fn = far - near;
+
+            return new Matrix
+            (
+                new double[,]
+                {
+                    { 2.0 / rl, 0,        0,         -(right + left) / rl   },
+                    { 0,        2.0 / tb, 0,         -(top + bottom) / tb   },
+                    { 0,        0,       -2.0 / fn,  -(far + near) / fn     },
+                    { 0,        0,        0,          1                     }
+                }
             );
         }
 
