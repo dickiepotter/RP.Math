@@ -487,16 +487,89 @@ double d = a.Distance(b);
 
 ### Angle between two vectors
 
-The angle between two vectors comes from normalising both and taking the arccosine of their dot
-product:
+```csharp
+double radians = a.Angle(b);
+```
+
+The angle `θ` between two vectors is always reported in `[0, π]`. Its textbook *definition* is the
+arccosine of the normalised dot product:
 
 ![angle from normalized dot product](docs/images/image028.gif)
 ![angle derivation](docs/images/image030.gif)
 ![angle result](docs/images/image031.gif)
 
-```csharp
-double radians = a.Angle(b);
+That definition is correct, but computing it *literally* as `arccos(a·b)` is numerically fragile. So the
+library returns the **same angle** by a different — and far steadier — route: **`θ = atan2(a×b length, a·b)`**.
+It feeds `atan2` two quantities the vector pair already provides — the dot product, which is large when
+the vectors are *aligned*, and the length of the cross product, which is large when they are
+*perpendicular*:
+
+| input to `atan2`           | proportional to | large when the vectors are |
+|----------------------------|-----------------|----------------------------|
+| `a · b` (dot product)      | `cos θ`         | **aligned** (θ near 0 or π) |
+| `a × b` length (cross product) | `sin θ`     | **perpendicular** (θ near 90°) |
+
+#### Why these two formulas give the same angle
+
+`atan2(y, x)` returns the angle of the point `(x, y)` measured from the positive *x*-axis. Feed it the
+dot product as `x` and the cross-product length as `y`, and that point is `|a||b|·(cos θ, sin θ)` — the
+same direction as `(cos θ, sin θ)`, just scaled by the positive number `|a||b|`. Scaling by a positive
+number does not change a point's angle, so `atan2` hands back exactly `θ`. And because `sin θ ≥ 0` for
+every `θ` in `[0, π]`, that point always sits in the upper half-plane, so the answer lands in `[0, π]`
+automatically — the very range we want.
+
+Geometrically — extending the cosine picture above — place `a` along the *x*-axis; the unit vector along
+`b` then sits on the unit circle at angle `θ`, with coordinates `(cos θ, sin θ) = (a·b, a×b length)`.
+`arccos` is given only the *x*-coordinate, `cos θ`, and must infer the angle from that single number;
+`atan2` is given both coordinates and reads the angle directly off the point.
+
+#### Why reading only `cos θ` is fragile
+
+`arccos` must recover the angle from its cosine alone, and the cosine is a poor messenger near the ends
+of the range. The slope of `arccos` is `−1 / √(1 − (a·b)²)`, which grows without bound as `a·b → ±1` —
+exactly where the vectors are nearly parallel or nearly anti-parallel. So a microscopic rounding error
+in `a·b` is magnified into a large error in `θ`, and if rounding pushes `a·b` just past `−1`, `arccos`
+returns `NaN` outright. The table traces that blow-up (for two near-anti-parallel unit vectors the
+rounded dot product is only about `1` ULP from `−1`):
+
+| `a · b` (cos θ) | θ | sensitivity `dθ/d(a·b) = −1/√(1−(a·b)²)` |
+|-----------------|-----|------------------------------------------|
+| `0` (perpendicular) | `90°`  | `−1.0` — gentle, harmless |
+| `−0.9`              | `154°` | `−2.3` |
+| `−0.99`             | `172°` | `−7.1` |
+| `−0.9999`           | `179°` | `−70.7` |
+| `−1 + 1e-16` (anti-parallel) | `≈180°` | `≈ −7×10⁷` — catastrophic |
+| `−1.0000000000000002` (rounded *past* −1) | — | `NaN` |
+
+This is the exact mechanism behind the old `Vector.Angle` bug: `arccos(a·b)` returned `NaN` for a vector
+and its own negation, because the rounded dot landed a hair below `−1`.
+
+#### Why reading both coordinates is steady
+
+`atan2` avoids this because near the poles it leans on the coordinate that is still *responsive*. Write
+`θ = π − φ` for a small `φ`: the cosine `cos θ = −cos φ ≈ −1 + φ²/2` flattens out — it changes only with
+`φ²`, so it loses precision — while the sine `sin θ = sin φ ≈ φ` keeps changing linearly and carries the
+information. Exactly where the dot product goes numb, the cross length is at its most informative, and
+`atan2`, seeing both, is governed by the responsive one. The same holds at `θ = 0`. The result is
+well-conditioned across the whole range, needs no clamping, and returns *exactly* `π` for a vector and
+its negation (`atan2(0, −1) = π`).
+
+```mermaid
+graph LR
+    D["a · b = cos θ<br/>'how aligned'"]
+    X["|a × b| = sin θ<br/>'how perpendicular'"]
+    AC["arccos(a · b)<br/>reads ONE coordinate"]
+    AT["atan2(|a × b|, a · b)<br/>reads BOTH coordinates"]
+    D --> AC
+    D --> AT
+    X --> AT
+    AC -.->|"blind to sin θ — vertical slope at θ = 0, π"| Bad["NaN / ~1e-8 error<br/>near (anti-)parallel"]
+    AT -.->|"sin θ stays responsive at the poles"| Good["exact, well-conditioned<br/>across all of 0..π"]
 ```
+
+(The implementation normalises both vectors first only so its existing special-case handling for zero,
+infinite and `NaN` components still governs the result; the `atan2` identity itself needs no
+normalisation, since it depends only on the *ratio* of the cross length to the dot.)
 
 ### Rotation: yaw, pitch and roll
 
@@ -536,6 +609,20 @@ axis assumption is baked in — switch the convention and the rotations follow i
 opposite way in a left- vs right-handed frame). When you want to name the *literal* axis instead, use
 `RotateX` / `RotateY` / `RotateZ` (with optional offset pivots and `Angle`-typed overloads). For
 robust, composable orientation prefer [`Quaternion`](#orientation-rotation-attitude-quaternion).
+
+This is exactly where the convention-aware design earns its keep. The literal `RotateZ` always banks
+about **+Z**; `Roll` banks about the frame's *own* **Forward**. So the two agree precisely when a
+frame's forward **is** +Z (DirectX, Unity) and correctly turn *opposite* ways when it is −Z (OpenGL,
+Maya, Godot, where +Z carries *near*):
+
+| Frame | `axes.Forward` | `Roll(θ)` equals |
+|-------|----------------|------------------|
+| DirectX / Unity (z = far) | `(0, 0, +1)` | `RotateZ(θ)` |
+| OpenGL / Maya / Godot / MathsYUp (z = near) | `(0, 0, −1)` | `RotateZ(−θ)` |
+
+`Roll` is the *honest* one: it surfaces an assumption the fixed-axis primitive silently bakes in
+(banking about +Z even in frames whose forward is −Z). The relationship is pinned as a positive test,
+`Roll_HonoursEachFramesForward_RelatingToLiteralRotateZ`.
 
 ### Projection, rejection and reflection
 
@@ -1834,40 +1921,12 @@ This matters because it breaks two expectations every *other* unary minus in the
 This is a **separate** latent bug from the pinned angle-reduction issue, and is deliberately left
 unfixed for now — recorded here so a future pass can decide whether unary `-` should become a true
 negation (and what that means for the comparison operators that currently lean on the coterminal `+`/`-`
-re-expression).
+re-expression). It is pinned by `Angle_UnaryMinus_NumericallyNegates_Test` in `MathematicalBugTests`.
 
-### A behaviour note: convention-aware `Roll` can differ in sign from the literal-axis `RotateZ`
-
-`Vector.Roll(angle, axes)` banks about the convention's **`Forward`** direction (the *far* axis), whereas
-the literal-axis `RotateZ(rad)` always rotates about **+Z**. These agree only when the convention's
-forward *is* +Z. For a z-**near** frame such as OpenGL — where `Forward` is `(0, 0, −1)` — `Roll(θ)`
-reduces to `RotateZ(−θ)`, the **opposite sign**:
-
-| Frame | `axes.Forward` | `Roll(θ)` equals | vs `RotateZ(θ)` |
-|-------|----------------|------------------|-----------------|
-| DirectX / Unity (z = far) | `(0, 0, +1)` | `RotateZ(θ)` | same sign |
-| OpenGL / Maya / Godot / MathsYUp (z = near) | `(0, 0, −1)` | `RotateZ(−θ)` | **opposite sign** |
-
-This is **not** a regression: it is the principled API being correct and surfacing an assumption the
-old literal-axis code buried — it always banked about +Z even in frames whose forward/depth direction is
-−Z. The convention-aware `Roll` instead banks about the frame's *actual* forward, so it disagrees with
-`RotateZ` exactly in the frames where forward ≠ +Z. The note is here so the sign change reads as
-expected behaviour rather than a surprise: `RotateZ` names a *literal* axis, `Roll` honours a
-*convention*. Both this note and the unary-minus bug above are pinned by tests in
-`MathematicalBugTests` (`Roll_ConventionAware_DiffersInSignFromLegacyFixedAxisRoll_Test` and
-`Angle_UnaryMinus_NumericallyNegates_Test`).
-
-### A latent bug: `Vector.Angle` returns `NaN` for anti-parallel vectors
-
-`Vector.Angle` clamps only the **upper** end of the `Acos` argument — `Math.Acos(Math.Min(1.0f, dot))`
-— and leaves the lower end unguarded. The dot product of two independently-normalised vectors is
-mathematically in `[−1, 1]`, but rounding routinely pushes it a hair outside: `normalize(v) · normalize(v)`
-can be `1.0000000000000002`, so for `v` and `−v` the dot is `−1.0000000000000002` and `Acos(< −1)` is
-`NaN`. The angle between any non-zero vector and its negation is exactly π, never `NaN`.
-
-The fix is a symmetric clamp to `[−1, 1]` before `Acos` (the same `Clamp` helper
-[`PolynomialRoots`](#supporting-numeric-helpers) already uses internally). It is left unfixed for now
-and pinned by `Angle_BetweenAVectorAndItsNegation_IsAlwaysPi_NeverNaN_Test`.
+(The convention-aware `Roll` vs literal `RotateZ` sign relationship — once listed here — is **not** a
+defect: it is the principled API being correct. It is documented as a strength under
+[Rotation: yaw, pitch and roll](#rotation-yaw-pitch-and-roll) and guarded by a positive test,
+`Roll_HonoursEachFramesForward_RelatingToLiteralRotateZ`.)
 
 ### A latent bug: `Angle.ToAngleValue` reduces to the wrong range and sign
 

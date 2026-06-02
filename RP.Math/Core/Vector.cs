@@ -889,9 +889,24 @@ namespace RP.Math
                 return 0;
             }
 
-            return 
-                Math.Acos(
-                    Math.Min(1.0f, NormalizeOrDefault(v1).DotProduct(NormalizeOrDefault(v2))));
+            // Normalise first so the special-case handling for infinite / zero / NaN components
+            // (in NormalizeOrDefault) still governs the result.
+            var u1 = NormalizeOrDefault(v1);
+            var u2 = NormalizeOrDefault(v2);
+
+            // Compute the angle as atan2(|u1 x u2|, u1 . u2) rather than the textbook acos(u1 . u2).
+            // The acos form is numerically fragile at BOTH ends of its domain:
+            //   * Its argument is mathematically in [-1, 1], but rounding routinely nudges the dot of
+            //     two unit vectors just outside that range. acos of anything outside [-1, 1] is NaN, so
+            //     anti-parallel vectors (dot ~ -1.0000000000000002) used to return NaN instead of pi.
+            //   * Even after clamping, acos is ill-conditioned near +/-1: its slope is infinite there,
+            //     so a 1-ULP error in the dot blows up into a ~1e-8 error in the angle exactly where the
+            //     vectors are (anti-)parallel.
+            // atan2 sidesteps both problems. The cross-product magnitude (sin) carries the precision
+            // near the parallel/anti-parallel limits where the dot (cos) is flat, so the result stays
+            // accurate and well-defined across the whole 0..pi range -- in particular atan2(0, -1) is
+            // exactly pi for a vector and its negation, with no clamp and no NaN.
+            return Math.Atan2(CrossProduct(u1, u2).Magnitude, u1.DotProduct(u2));
         }
 
         /// <summary>

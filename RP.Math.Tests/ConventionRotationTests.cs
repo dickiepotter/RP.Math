@@ -68,6 +68,25 @@ namespace RP.Math.Tests
             openGl.Equals(v.Roll(new Angle(-rad), OrthogonalAxes.Unity), Tol).Should().BeTrue();
         }
 
+        [TestMethod]
+        public void Roll_HonoursEachFramesForward_RelatingToLiteralRotateZ()
+        {
+            // The strength of the convention-aware Roll: it banks about the frame's OWN Forward, where
+            // the literal RotateZ always turns about +Z. So the two agree exactly when a frame's forward
+            // IS +Z, and correctly turn opposite ways when it is -Z — the convention-aware result is the
+            // honest one, surfacing an assumption the fixed-axis primitive silently bakes in.
+            var v = new Vector(1, 1, 0);
+            double rad = System.Math.PI / 3;
+
+            // DirectX / Unity: Forward = +Z, so Roll matches the literal RotateZ(+rad).
+            v.Roll(new Angle(rad), OrthogonalAxes.DirectX)
+                .Equals(v.RotateZ(rad), Tol).Should().BeTrue("DirectX forward is +Z");
+
+            // OpenGL: Forward = -Z, so Roll(+rad) equals the literal RotateZ(-rad).
+            v.Roll(new Angle(rad), OrthogonalAxes.OpenGL)
+                .Equals(v.RotateZ(-rad), Tol).Should().BeTrue("OpenGL forward is -Z");
+        }
+
         // ---- Quaternion.FromYawPitchRoll(..., axes) and Attitude --------------------------------
 
         [TestMethod]

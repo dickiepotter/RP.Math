@@ -16,25 +16,28 @@ namespace RP.Math.Tests
     /// independent of the implementation. Each one localises a real defect, not a quirk of the test;
     /// they are deliberately NOT written to rubber-stamp the existing behaviour.
     ///
-    /// Status: Bugs 2, 3, 5 and 6 are now FIXED — those tests pass and act as regression guards.
-    /// Bugs 1 and 4 remain OPEN by choice and are tracked in the README's "Future considerations";
-    /// their tests are still EXPECTED TO FAIL. Bugs 7 and 8 pin newly-documented behaviour (see each
-    /// test for whether it is a defect or a convention gotcha).
+    /// Status: Bugs 1, 2, 3, 5 and 6 are now FIXED — those tests pass and act as regression guards.
+    /// Bug 4 remains OPEN by choice and is tracked in the README's "Future considerations"; its test is
+    /// still EXPECTED TO FAIL. Bug 7 pins a newly-documented defect (unary minus).
+    /// (The former "Bug 8" was a convention feature, not a defect — the convention-aware Roll honouring
+    /// each frame's own Forward — and now lives as a positive test in ConventionRotationTests.)
     /// </summary>
     [TestClass]
     public class MathematicalBugTests
     {
         // ------------------------------------------------------------------
-        // BUG 1 (open — tracked in README) — Vector.Angle does not clamp the acos argument to the
-        // LOWER bound, so anti-parallel vectors yield NaN instead of pi.
+        // BUG 1 (FIXED) — Vector.Angle used to yield NaN for anti-parallel vectors.
         //
-        // Vector.cs:892-894 does  Math.Acos(Math.Min(1.0f, dot)).  The dot of two
-        // independently-normalised vectors is mathematically in [-1, 1] but rounding
-        // routinely pushes it just outside; e.g. normalize(v) . normalize(v) can be
-        // 1.0000000000000002, so for v and -v the dot is -1.0000000000000002 and
-        // Acos(<-1) = NaN.  Only the upper bound is clamped; the lower bound is not.
+        // The old code did  Math.Acos(Math.Min(1.0f, dot)).  The dot of two independently-normalised
+        // vectors is mathematically in [-1, 1] but rounding routinely pushes it just outside; e.g.
+        // normalize(v) . normalize(v) can be 1.0000000000000002, so for v and -v the dot is
+        // -1.0000000000000002 and Acos(<-1) = NaN.  Only the upper bound was clamped, not the lower.
         //
-        // The angle between any non-zero vector and its negation is exactly pi.
+        // Fixed by computing the angle as atan2(|v1 x v2|, v1 . v2), which is well-conditioned across
+        // the whole 0..pi range and returns exactly pi for a vector and its negation — no NaN, and none
+        // of the ~1e-8 precision loss acos suffers near +/-1 even once clamped.  This test now passes
+        // and acts as a regression guard.  The angle between any non-zero vector and its negation is
+        // exactly pi.
         // ------------------------------------------------------------------
         [TestMethod, TestCategory("Bug")]
         public void Angle_BetweenAVectorAndItsNegation_IsAlwaysPi_NeverNaN_Test()
@@ -201,31 +204,6 @@ namespace RP.Math.Tests
             // The negative of +90 deg is -90 deg, and the two must cancel.
             negated.Rad.Should().BeApproximately(-Math.PI / 2, 1e-9);
             (a + negated).Rad.Should().BeApproximately(0, 1e-9);
-        }
-
-        // ------------------------------------------------------------------
-        // BUG 8 (gotcha — by design, pinned for documentation) — the principled Roll(angle, axes)
-        // can differ in SIGN from the legacy fixed-axis roll for some conventions.
-        //
-        // The legacy API rolls by rotating about +Z (Vector.RotateZ). The convention-aware
-        // Vector.Roll(angle, axes) rotates about axes.Forward. In OpenGL the forward direction is -Z
-        // (z carries NEAR), so the convention-aware roll turns the OPPOSITE way to the legacy roll —
-        // porting RotateZ-based "roll" code to Roll(angle, OpenGL) silently flips the bank direction.
-        //
-        // This test asserts the naive equivalence a porter might assume; it is EXPECTED TO FAIL,
-        // documenting that the equivalence does not hold for forward = -Z frames. (For a +Z-forward
-        // frame such as DirectX/Unity the two agree.)
-        // ------------------------------------------------------------------
-        [TestMethod, TestCategory("Bug")]
-        public void Roll_ConventionAware_DiffersInSignFromLegacyFixedAxisRoll_Test()
-        {
-            var v = new Vector(1, 1, 0);
-            double rad = Math.PI / 3;
-
-            var principled = v.Roll(new Angle(rad), OrthogonalAxes.OpenGL); // about Forward = -Z
-            var legacy = v.RotateZ(rad);                                    // legacy roll about +Z
-
-            principled.Equals(legacy, 1e-9).Should().BeTrue();
         }
     }
 }
