@@ -95,35 +95,6 @@ namespace RP.Math.Tests
 
         #endregion
 
-        #region Rotation <-> Attitude bridge
-
-        [TestMethod, TestCategory("Attitude")]
-        public void ToAttitude_ShouldMapAxesToYawPitchRoll_Test()
-        {
-            // pitch about X, yaw about Y, roll about Z.
-            var r = new Rotation(Deg(10), Deg(20), Deg(30));
-            var a = r.ToAttitude();
-            a.Pitch.Deg.Should().BeApproximately(10, Tol);
-            a.Yaw.Deg.Should().BeApproximately(20, Tol);
-            a.Roll.Deg.Should().BeApproximately(30, Tol);
-        }
-
-        [TestMethod, TestCategory("Attitude")]
-        public void AttitudeToRotation_ShouldRoundTrip_Test()
-        {
-            var a = new Attitude(Deg(20), Deg(10), Deg(30)); // yaw, pitch, roll
-            a.ToRotation().ToAttitude().Equals(a, Tol).Should().BeTrue();
-        }
-
-        [TestMethod, TestCategory("Attitude")]
-        public void Attitude_AndEquivalentRotation_ShouldProduceSameQuaternion_Test()
-        {
-            var a = new Attitude(Deg(20), Deg(10), Deg(30));
-            a.ToQuaternion().Equals(a.ToRotation().ToQuaternion(), Tol).Should().BeTrue();
-        }
-
-        #endregion
-
         #region Equality, formatting, deconstruction
 
         [TestMethod, TestCategory("Equality")]

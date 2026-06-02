@@ -1096,7 +1096,7 @@
         public void YawTest()
         {
             var vector = new Vector(1, 0, 0);
-            var result = vector.Yaw(Deg90AsRad);
+            var result = vector.Yaw(new Angle(Deg90AsRad), OrthogonalAxes.DirectX);
 
             System.Math.Round(result.X, 6).Should().Be(0);
             System.Math.Round(result.Y, 6).Should().Be(0);
@@ -1110,7 +1110,7 @@
         public void PitchTest()
         {
             var vector = new Vector(0, 1, 0);
-            var result = vector.Pitch(Deg90AsRad);
+            var result = vector.Pitch(new Angle(Deg90AsRad), OrthogonalAxes.DirectX);
 
             System.Math.Round(result.X, 6).Should().Be(0);
             System.Math.Round(result.Y, 6).Should().Be(0);
@@ -1124,7 +1124,7 @@
         public void RollTest()
         {
             var vector = new Vector(1, 0, 0);
-            var result = vector.Roll(Deg90AsRad);
+            var result = vector.Roll(new Angle(Deg90AsRad), OrthogonalAxes.DirectX);
 
             System.Math.Round(result.X, 6).Should().Be(0);
             System.Math.Round(result.Y, 6).Should().Be(1);
@@ -1246,10 +1246,10 @@
         public void RotateArroundYAxisShouldBeTheSameAsYawTest()
         {
             var vector = new Vector(1, 0, 0);
-            var yaw = vector.Yaw(Deg90AsRad);
+            var yaw = vector.Yaw(new Angle(Deg90AsRad), OrthogonalAxes.DirectX);
             var rotate = vector.RotateY(Deg90AsRad);
 
-            rotate.Should().Be(yaw);
+            rotate.Equals(yaw, 1e-9).Should().BeTrue();
         }
 
         /// <summary>
@@ -1259,14 +1259,14 @@
         public void RotateArroundXAxisShouldBeTheSameAsPitchTest()
         {
             var vector = new Vector(0, 1, 0);
-            var pitch = vector.Pitch(Deg90AsRad);
+            var pitch = vector.Pitch(new Angle(Deg90AsRad), OrthogonalAxes.DirectX);
             var rotate = vector.RotateX(Deg90AsRad);
 
             System.Math.Round(pitch.X, 6).Should().Be(0);
             System.Math.Round(pitch.Y, 6).Should().Be(0);
             System.Math.Round(pitch.Z, 6).Should().Be(1);
 
-            rotate.Should().Be(pitch);
+            rotate.Equals(pitch, 1e-9).Should().BeTrue();
         }
 
         /// <summary>
@@ -1276,20 +1276,20 @@
         public void RotateArroundZShouldBeTheSameAsRollTest()
         {
             var vector = new Vector(1, 0, 0);
-            var roll = vector.Roll(Deg90AsRad);
+            var roll = vector.Roll(new Angle(Deg90AsRad), OrthogonalAxes.DirectX);
             var rotate = vector.RotateZ(Deg90AsRad);
 
-            rotate.Should().Be(roll);
+            rotate.Equals(roll, 1e-9).Should().BeTrue();
         }
 
         [TestMethod]
         public void RotateArroundYWith0OffsetParametersAxisShouldBeTheSameAsYawTest()
         {
             var vector = new Vector(1, 0, 0);
-            var yaw = vector.Yaw(Deg90AsRad);
+            var yaw = vector.Yaw(new Angle(Deg90AsRad), OrthogonalAxes.DirectX);
             var rotate = vector.RotateY(0, 0, Deg90AsRad);
 
-            rotate.Should().Be(yaw);
+            rotate.Equals(yaw, 1e-9).Should().BeTrue();
         }
 
         /// <summary>
@@ -1299,14 +1299,14 @@
         public void RotateArroundXAxis0OffsetParametersShouldBeTheSameAsPitchTest()
         {
             var vector = new Vector(0, 1, 0);
-            var pitch = vector.Pitch(Deg90AsRad);
+            var pitch = vector.Pitch(new Angle(Deg90AsRad), OrthogonalAxes.DirectX);
             var rotate = vector.RotateX(0, 0, Deg90AsRad);
 
             System.Math.Round(pitch.X, 6).Should().Be(0);
             System.Math.Round(pitch.Y, 6).Should().Be(0);
             System.Math.Round(pitch.Z, 6).Should().Be(1);
 
-            rotate.Should().Be(pitch);
+            rotate.Equals(pitch, 1e-9).Should().BeTrue();
         }
 
         /// <summary>
@@ -1316,10 +1316,10 @@
         public void RotateArroundZ0OffsetParametersShouldBeTheSameAsRollTest()
         {
             var vector = new Vector(1, 0, 0);
-            var roll = vector.Roll(Deg90AsRad);
+            var roll = vector.Roll(new Angle(Deg90AsRad), OrthogonalAxes.DirectX);
             var rotate = vector.RotateZ(0, 0, Deg90AsRad);
 
-            rotate.Should().Be(roll);
+            rotate.Equals(roll, 1e-9).Should().BeTrue();
         }
 
         #endregion

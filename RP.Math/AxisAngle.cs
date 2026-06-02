@@ -90,10 +90,13 @@ namespace RP.Math
             return FromQuaternion(rotation.ToQuaternion());
         }
 
-        /// <summary>The axis-angle equivalent of an <see cref="Attitude"/> (yaw/pitch/roll).</summary>
-        public static AxisAngle FromAttitude(Attitude attitude)
+        /// <summary>
+        /// The axis-angle equivalent of an <see cref="Attitude"/> (yaw/pitch/roll), interpreting the yaw /
+        /// pitch / roll in the given coordinate convention.
+        /// </summary>
+        public static AxisAngle FromAttitude(Attitude attitude, OrthogonalAxes axes)
         {
-            return FromQuaternion(attitude.ToQuaternion());
+            return FromQuaternion(attitude.ToQuaternion(axes));
         }
 
         #endregion
@@ -119,12 +122,6 @@ namespace RP.Math
         public Rotation ToRotation()
         {
             return Rotation.FromQuaternion(this.ToQuaternion());
-        }
-
-        /// <summary>Express this rotation in the yaw/pitch/roll naming of <see cref="Attitude"/>.</summary>
-        public Attitude ToAttitude()
-        {
-            return this.ToRotation().ToAttitude();
         }
 
         #endregion

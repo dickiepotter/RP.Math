@@ -222,6 +222,28 @@ namespace RP.Math
             return new LineSegment(Tail, Tail + (Head - Tail).RotateZ(angle));
         }
 
+        /// <summary>
+        /// A copy of the segment with its head rotated about its tail as a yaw (about the convention's
+        /// <see cref="OrthogonalAxes.Up"/>). Like <see cref="RotateX(Angle)"/>, the tail stays fixed and the
+        /// tail-to-head displacement is rotated; the axis is read from <paramref name="axes"/> rather than assumed.
+        /// </summary>
+        public LineSegment Yaw(Angle angle, OrthogonalAxes axes)
+        {
+            return new LineSegment(Tail, Tail + (Head - Tail).Yaw(angle, axes));
+        }
+
+        /// <summary>A copy of the segment with its head rotated about its tail as a pitch (about the convention's <see cref="OrthogonalAxes.Right"/>).</summary>
+        public LineSegment Pitch(Angle angle, OrthogonalAxes axes)
+        {
+            return new LineSegment(Tail, Tail + (Head - Tail).Pitch(angle, axes));
+        }
+
+        /// <summary>A copy of the segment with its head rotated about its tail as a roll (about the convention's <see cref="OrthogonalAxes.Forward"/>).</summary>
+        public LineSegment Roll(Angle angle, OrthogonalAxes axes)
+        {
+            return new LineSegment(Tail, Tail + (Head - Tail).Roll(angle, axes));
+        }
+
         #endregion
 
         #region Interpolate (point between the ends)

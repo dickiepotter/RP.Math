@@ -44,8 +44,8 @@ namespace RP.Math.Tests
         public void Construction_FromAttitude_ShouldMatchQuaternionForm_Test()
         {
             var att = new Attitude(Deg(30), Deg(20), Deg(10));
-            var fromAttitude = new Pose(new Vector(2, 1, 0), att);
-            var fromQuaternion = new Pose(new Vector(2, 1, 0), att.ToQuaternion());
+            var fromAttitude = new Pose(new Vector(2, 1, 0), att, OrthogonalAxes.DirectX);
+            var fromQuaternion = new Pose(new Vector(2, 1, 0), att.ToQuaternion(OrthogonalAxes.DirectX));
             fromAttitude.Equals(fromQuaternion, Tol).Should().BeTrue();
         }
 
@@ -85,7 +85,7 @@ namespace RP.Math.Tests
         [TestMethod, TestCategory("Apply")]
         public void ToMatrix_TimesPoint_ShouldMatchApply_Test()
         {
-            var pose = new Pose(new Vector(4, -3, 7), new Attitude(Deg(25), Deg(15), Deg(40)));
+            var pose = new Pose(new Vector(4, -3, 7), new Attitude(Deg(25), Deg(15), Deg(40)), OrthogonalAxes.DirectX);
             var p = new Vector(1, 2, 3);
             (pose.ToMatrix() * p).Equals(pose.Apply(p), Tol).Should().BeTrue();
         }
@@ -107,7 +107,7 @@ namespace RP.Math.Tests
         [TestMethod, TestCategory("Compose")]
         public void PoseTimesInverse_ShouldBeIdentity_Test()
         {
-            var pose = new Pose(new Vector(10, -5, 2), new Attitude(Deg(20), Deg(35), Deg(50)));
+            var pose = new Pose(new Vector(10, -5, 2), new Attitude(Deg(20), Deg(35), Deg(50)), OrthogonalAxes.DirectX);
             var p = new Vector(3, 4, 5);
             (pose * pose.Inverse()).Apply(p).Equals(p, Tol).Should().BeTrue();
         }

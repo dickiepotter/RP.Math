@@ -354,38 +354,41 @@ double radians = a.Angle(b);
 
 ### Rotation: yaw, pitch and roll
 
-`Yaw`, `Pitch` and `Roll` rotate a vector about the Y, X and Z axes respectively (Euler rotations).
+`Yaw`, `Pitch` and `Roll` rotate a vector about a coordinate convention's **Up**, **Right** and
+**Forward** axes — *not* a hard-wired X/Y/Z. "Yaw" only means something once you have decided which way
+is up, so each overload takes an [`OrthogonalAxes`](#orthogonalaxes) convention, and the sense of a
+positive angle follows that convention's handedness:
 
-**Yaw** — rotation about the **Y** axis:
+```csharp
+Vector yawed   = v.Yaw(angle, OrthogonalAxes.DirectX);     // about axes.Up
+Vector pitched = v.Pitch(angle, OrthogonalAxes.DirectX);   // about axes.Right
+Vector rolled  = v.Roll(angle, OrthogonalAxes.DirectX);    // about axes.Forward
+```
+
+The pictures below show the **DirectX** convention, where Up / Right / Forward are +Y / +X / +Z.
+
+**Yaw** — about the convention's **Up** (here +Y):
 
 ![yaw setup](docs/images/image032.gif)
 ![yaw result x](docs/images/image043.gif)
 ![yaw result z](docs/images/image044.gif)
 
-```csharp
-public static Vector Yaw(Vector v1, double rad)
-{
-   double x = (v1.Z * Math.Sin(rad)) + (v1.X * Math.Cos(rad));
-   double y = v1.Y;
-   double z = (v1.Z * Math.Cos(rad)) - (v1.X * Math.Sin(rad));
-   return new Vector(x, y, z);
-}
-```
-
-**Pitch** — rotation about the **X** axis:
+**Pitch** — about the convention's **Right** (here +X):
 
 ![pitch setup](docs/images/image045.gif)
 ![pitch result y](docs/images/image056.gif)
 ![pitch result z](docs/images/image057.gif)
 
-**Roll** — rotation about the **Z** axis:
+**Roll** — about the convention's **Forward** (here +Z):
 
 ![roll setup](docs/images/image058.gif)
 ![roll result x](docs/images/image068.gif)
 ![roll result y](docs/images/image069.gif)
 
-The library also provides axis-named `RotateX` / `RotateY` / `RotateZ` (with optional offset pivots),
-and `Angle`-typed overloads so you can rotate by an `Angle` rather than a bare radian `double`. For
+Each delegates to the library's single right-hand-rule primitive (`Quaternion.FromAxisAngle`), so no
+axis assumption is baked in — switch the convention and the rotations follow it (a `Roll` banks the
+opposite way in a left- vs right-handed frame). When you want to name the *literal* axis instead, use
+`RotateX` / `RotateY` / `RotateZ` (with optional offset pivots and `Angle`-typed overloads). For
 robust, composable orientation prefer [`Quaternion`](#orientation-rotation-attitude-quaternion).
 
 ### Projection, rejection and reflection
@@ -739,18 +742,23 @@ Vector turned = r.Rotate(v);
 Component arithmetic (`+`, `-`) acts **component-wise on the angles** — useful for nudging a rotation,
 but *not* the same as composing two rotations. For true composition, convert to a `Quaternion` and
 multiply. `ToQuaternion` / `FromQuaternion` bridge the two exactly (folding X into Z at the
-gimbal-lock poles), and `Inverse()`, `ToMatrix()` and `ToAttitude()` round it out.
+gimbal-lock poles), and `Inverse()` and `ToMatrix()` round it out. `Rotation` names the *literal* X/Y/Z
+axes, so it needs no convention.
 
 ### `Attitude` — yaw / pitch / roll
 
-The same idea as `Rotation` in aviation naming: `Yaw` (heading, about Y), `Pitch` (elevation, about X)
-and `Roll` (bank, about Z). It shares a single composition convention with `Rotation` (it delegates
-through `ToRotation().ToQuaternion()`), so the two never disagree.
+Aviation naming for an orientation: yaw (heading), pitch (elevation) and roll (bank). Those words only
+become concrete once a convention says which way is up, right and forward, so an `Attitude` turns into
+a rotation **only** when you hand it an [`OrthogonalAxes`](#orthogonalaxes) — there is deliberately no
+axis-free conversion. Yaw is about `axes.Up`, pitch about `axes.Right`, roll about `axes.Forward`, and
+the result follows that convention's handedness.
 
 ```csharp
 var att = new Attitude(yaw, pitch, roll);
-var y   = Attitude.FromYaw(angle);               // FromYaw / FromPitch / FromRoll
-Vector v2 = att.Rotate(v);
+var y   = Attitude.FromYaw(angle);                       // FromYaw / FromPitch / FromRoll
+Quaternion q = att.ToQuaternion(OrthogonalAxes.OpenGL);  // yaw/pitch/roll → rotation, in a convention
+Vector v2 = att.Rotate(v, OrthogonalAxes.OpenGL);
+Attitude back = Attitude.FromQuaternion(q, OrthogonalAxes.OpenGL);   // and the convention-aware read-back
 ```
 
 ### `Quaternion` — the robust form
@@ -773,7 +781,7 @@ Why it is the dependable representation:
 - **Interpolates smoothly** — `Slerp` walks the shortest arc at constant angular speed (with `Lerp`
   as the cheaper straight-line approximation).
 
-It also offers `Conjugate`/`Inverse`, `DotProduct`, `AngleBetween`/`AngleTo`, `FromYawPitchRoll`,
+It also offers `Conjugate`/`Inverse`, `DotProduct`, `AngleBetween`/`AngleTo`, `FromYawPitchRoll(…, OrthogonalAxes)`,
 `ToMatrix`, the identity/zero/NaN constants, and predicates `IsUnit`, `IsIdentity`, `IsZero`, `IsNaN`.
 
 ---
@@ -783,11 +791,11 @@ It also offers `Conjugate`/`Inverse`, `DotProduct`, `AngleBetween`/`AngleTo`, `F
 A `Pose` is a rigid placement in space — a **position together with an orientation** ("where" *and*
 "which way"). It is the human-meaningful form of a rigid transform, as opposed to a 4×4
 [`Matrix`](#matrix). Internally the orientation is kept as a unit `Quaternion` (the robust
-representation), but you can construct it from, and read it back as, the friendlier `Rotation` or
-`Attitude`.
+representation), but you can construct it from a friendlier `Rotation` (or an `Attitude` plus a
+convention) and read it back as Euler angles.
 
 ```csharp
-var pose = new Pose(position, rotation);          // also accepts a Rotation or an Attitude
+var pose = new Pose(position, rotation);          // also a Rotation, or an Attitude + an OrthogonalAxes
 var at   = Pose.At(position);                      // no rotation
 var fa   = Pose.FromAxisAngle(position, axis, angle);
 ```
@@ -803,9 +811,10 @@ Matrix m      = pose.ToMatrix();                   // the equivalent 4×4 transf
 
 **Composition.** `Compose` (and the `*` operator) chains two poses — `outer * inner` applies `inner`
 first, then `outer` — and `Inverse()` undoes a pose. Modifier methods return a new pose:
-`Translate(offset)`, `RotateBy(delta)`, `WithPosition(p)`, `WithRotation(q)`. Reading helpers expose
-the orientation as Euler angles (`RotationAsEuler`) or yaw/pitch/roll (`RotationAsAttitude`), and
-`Pose.Identity` is the pose at the origin with no rotation.
+`Translate(offset)`, `RotateBy(delta)`, `WithPosition(p)`, `WithRotation(q)`. The `RotationAsEuler`
+helper reads the orientation back as Euler X/Y/Z angles (for yaw/pitch/roll, use
+`Attitude.FromQuaternion(pose.Rotation, axes)` with your convention), and `Pose.Identity` is the pose
+at the origin with no rotation.
 
 ---
 
@@ -1161,7 +1170,10 @@ functionality, clarity ahead of speed.
 It is an early-state, actively-developing project: the core numeric types are well covered by tests.
 The former `Axis` and `OrthogonalAxis` types are now merged into a single `OrthogonalAxes` convention,
 which carries the coordinate-frame logic they left unfinished and exposes the major systems (OpenGL,
-Direct3D, Unity, Unreal, Blender, …) as named constants. The `Shape`
+Direct3D, Unity, Unreal, Blender, …) as named constants. The yaw/pitch/roll rotation API now consumes
+an `OrthogonalAxes` in both directions (`Attitude.ToQuaternion(axes)` / `FromQuaternion(q, axes)`,
+`Vector.Yaw/Pitch/Roll(angle, axes)`): there is no longer any rotation entry point that silently
+assumes a fixed up/right/forward. The `Shape`
 types follow a settled conceptual/placed split — `Circle`, `Sphere`, `Triangle`, `Rectangle`, `Ellipse`,
 `Annulus`, `Sector`, `Cuboid`, `Cylinder`, `Cone`, `Capsule`, `Ellipsoid` and `Torus`, each with a
 `Placed…` partner, plus the always-placed `PlacedPolygon` and `PlacedTetrahedron`.

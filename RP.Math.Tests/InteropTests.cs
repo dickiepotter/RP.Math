@@ -42,7 +42,7 @@ namespace RP.Math.Tests
             V.Rotate(r).Equals(r.Rotate(V), LooseTol).Should().BeTrue();
 
             var a = Attitude.FromYaw(new Angle(Math.PI / 4));
-            V.Rotate(a).Equals(a.Rotate(V), LooseTol).Should().BeTrue();
+            V.Rotate(a, OrthogonalAxes.DirectX).Equals(a.Rotate(V, OrthogonalAxes.DirectX), LooseTol).Should().BeTrue();
         }
 
         #endregion

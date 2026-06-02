@@ -163,15 +163,15 @@ public static class Operations
         Add("rotateZ", "Rotate about Z", "Rotation", "Rz(θ) · A",
             "Rotates A around the Z axis by θ.",
             c => OpResult.Vec(c.A.RotateZ(c.AngleRad)), Input.Angle);
-        Add("yaw", "Yaw", "Rotation", "yaw θ (about Y)",
-            "Aviation-style yaw: rotation about the vertical (Y) axis.",
-            c => OpResult.Vec(c.A.Yaw(c.AngleRad)), Input.Angle);
-        Add("pitch", "Pitch", "Rotation", "pitch θ (about X)",
-            "Aviation-style pitch: rotation about the side (X) axis.",
-            c => OpResult.Vec(c.A.Pitch(c.AngleRad)), Input.Angle);
-        Add("roll", "Roll", "Rotation", "roll θ (about Z)",
-            "Aviation-style roll: rotation about the forward (Z) axis.",
-            c => OpResult.Vec(c.A.Roll(c.AngleRad)), Input.Angle);
+        Add("yaw", "Yaw", "Rotation", "yaw θ (about Up)",
+            "Aviation-style yaw: rotation about the convention's Up (DirectX: +Y).",
+            c => OpResult.Vec(c.A.Yaw(new Angle(c.AngleRad), OrthogonalAxes.DirectX)), Input.Angle);
+        Add("pitch", "Pitch", "Rotation", "pitch θ (about Right)",
+            "Aviation-style pitch: rotation about the convention's Right (DirectX: +X).",
+            c => OpResult.Vec(c.A.Pitch(new Angle(c.AngleRad), OrthogonalAxes.DirectX)), Input.Angle);
+        Add("roll", "Roll", "Rotation", "roll θ (about Forward)",
+            "Aviation-style roll: rotation about the convention's Forward (DirectX: +Z).",
+            c => OpResult.Vec(c.A.Roll(new Angle(c.AngleRad), OrthogonalAxes.DirectX)), Input.Angle);
 
         // ---- Components ----
         Add("abs", "Abs()", "Components", "|A|",

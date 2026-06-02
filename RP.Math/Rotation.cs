@@ -186,13 +186,6 @@ namespace RP.Math
             return FromQuaternion(this.ToQuaternion().Conjugate());
         }
 
-        /// <summary>Express this rotation in the yaw/pitch/roll naming of <see cref="Attitude"/>.</summary>
-        public Attitude ToAttitude()
-        {
-            // yaw about Y, pitch about X, roll about Z.
-            return new Attitude(this.y, this.x, this.z);
-        }
-
         #endregion
 
         #region Apply
@@ -270,9 +263,11 @@ namespace RP.Math
     /// An immutable orientation in the navigation naming of yaw, pitch and roll.
     /// </summary>
     /// <remarks>
-    /// A companion to <see cref="Rotation"/> using aviation terms. Convention: yaw about the Y axis,
-    /// pitch about the X axis, roll about the Z axis. Like <see cref="Rotation"/>, the robust form is a
-    /// <see cref="Quaternion"/>.
+    /// A companion to <see cref="Rotation"/> using aviation terms. Yaw, pitch and roll are only meaningful
+    /// once a coordinate convention says which way is up, right and forward, so turning an attitude into a
+    /// concrete rotation requires an <see cref="OrthogonalAxes"/> (see <see cref="ToQuaternion(OrthogonalAxes)"/>):
+    /// yaw is about <see cref="OrthogonalAxes.Up"/>, pitch about <see cref="OrthogonalAxes.Right"/>, roll about
+    /// <see cref="OrthogonalAxes.Forward"/>. Like <see cref="Rotation"/>, the robust form is a <see cref="Quaternion"/>.
     /// </remarks>
     [Serializable]
     public struct Attitude : IEquatable<Attitude>, IFormattable
@@ -314,13 +309,13 @@ namespace RP.Math
 
         #region Accessors
 
-        /// <summary>The yaw (heading) angle, about the Y axis.</summary>
+        /// <summary>The yaw (heading) angle — rotation about the convention's <see cref="OrthogonalAxes.Up"/>.</summary>
         public Angle Yaw { get { return this.yaw; } }
 
-        /// <summary>The pitch (elevation) angle, about the X axis.</summary>
+        /// <summary>The pitch (elevation) angle — rotation about the convention's <see cref="OrthogonalAxes.Right"/>.</summary>
         public Angle Pitch { get { return this.pitch; } }
 
-        /// <summary>The roll (bank) angle, about the Z axis.</summary>
+        /// <summary>The roll (bank) angle — rotation about the convention's <see cref="OrthogonalAxes.Forward"/>.</summary>
         public Angle Roll { get { return this.roll; } }
 
         #endregion
@@ -341,32 +336,67 @@ namespace RP.Math
         #region Conversion
 
         /// <summary>
-        /// The equivalent unit <see cref="Quaternion"/> (yaw about Y, pitch about X, roll about Z).
-        /// Delegates through <see cref="ToRotation"/> so <see cref="Attitude"/> and <see cref="Rotation"/>
-        /// share a single composition convention.
+        /// The equivalent unit <see cref="Quaternion"/> with the yaw / pitch / roll angles interpreted in
+        /// the given coordinate convention: yaw about <see cref="OrthogonalAxes.Up"/>, pitch about
+        /// <see cref="OrthogonalAxes.Right"/>, roll about <see cref="OrthogonalAxes.Forward"/>.
         /// </summary>
-        public Quaternion ToQuaternion()
+        public Quaternion ToQuaternion(OrthogonalAxes axes)
         {
-            return this.ToRotation().ToQuaternion();
+            return Quaternion.FromYawPitchRoll(this.yaw, this.pitch, this.roll, axes);
         }
 
-        /// <summary>The equivalent 4x4 homogeneous rotation matrix.</summary>
-        public Matrix ToMatrix()
+        /// <summary>Rotate a vector by this attitude, interpreting yaw / pitch / roll in the given convention.</summary>
+        public Vector Rotate(Vector v, OrthogonalAxes axes)
         {
-            return this.ToQuaternion().ToMatrix();
+            return this.ToQuaternion(axes).Rotate(v);
         }
 
-        /// <summary>Express this attitude in the X/Y/Z naming of <see cref="Rotation"/>.</summary>
-        public Rotation ToRotation()
+        /// <summary>
+        /// Recover the yaw / pitch / roll of a rotation, read in the given coordinate convention. This is
+        /// the inverse of <see cref="ToQuaternion(OrthogonalAxes)"/>: yaw is about <see cref="OrthogonalAxes.Up"/>,
+        /// pitch about <see cref="OrthogonalAxes.Right"/>, roll about <see cref="OrthogonalAxes.Forward"/>.
+        /// At the pitch singularity (±90°) the roll is folded into the yaw.
+        /// </summary>
+        /// <remarks>
+        /// The three rotation axes are orthonormal, so changing into the convention's own basis
+        /// (<c>P = [Right Up Forward]</c>) turns the Up–Right–Forward sequence into the standard
+        /// <c>R_y(A)·R_x(B)·R_z(C)</c>, which has a known closed-form extraction. The basis sign
+        /// <c>s = ±1</c> (negative for a right-handed convention) carries the rotation sense back out, so
+        /// the result follows that convention's handedness — matching <see cref="ToQuaternion(OrthogonalAxes)"/>.
+        /// </remarks>
+        public static Attitude FromQuaternion(Quaternion q, OrthogonalAxes axes)
         {
-            // pitch about X, yaw about Y, roll about Z.
-            return new Rotation(this.pitch, this.yaw, this.roll);
-        }
+            Quaternion qn = q.NormalizeOrDefault();
+            Vector right = axes.Right, up = axes.Up, fwd = axes.Forward;
 
-        /// <summary>Rotate a vector by this attitude.</summary>
-        public Vector Rotate(Vector v)
-        {
-            return this.ToQuaternion().Rotate(v);
+            // s = sign of the basis triple product: negative ⇒ right-handed convention.
+            double s = right.CrossProduct(up).DotProduct(fwd) < 0 ? -1.0 : 1.0;
+
+            // Columns of M (the rotation matrix) in the convention's basis: M(basis) = q.Rotate(basis).
+            Vector mRight = qn.Rotate(right);
+            Vector mUp = qn.Rotate(up);
+            Vector mFwd = qn.Rotate(fwd);
+
+            // N = P^T M P entries, where N = R_y(A)·R_x(B)·R_z(C) with A = s·yaw, B = s·pitch, C = s·roll.
+            double sinB = Math.Max(-1.0, Math.Min(1.0, -up.DotProduct(mFwd))); // sin B = -N12
+            double bAngle = Math.Asin(sinB);
+
+            double aAngle, cAngle;
+            if (Math.Abs(sinB) < 1.0 - 1e-9)
+            {
+                aAngle = Math.Atan2(right.DotProduct(mFwd), fwd.DotProduct(mFwd)); // atan2(N02, N22)
+                cAngle = Math.Atan2(up.DotProduct(mRight), up.DotProduct(mUp));    // atan2(N10, N11)
+            }
+            else
+            {
+                // Pitch ±90°: fold the roll into the yaw.
+                double n00 = right.DotProduct(mRight);
+                double n01 = right.DotProduct(mUp);
+                aAngle = sinB > 0 ? Math.Atan2(n01, n00) : Math.Atan2(-n01, n00);
+                cAngle = 0.0;
+            }
+
+            return new Attitude(new Angle(s * aAngle), new Angle(s * bAngle), new Angle(s * cAngle));
         }
 
         #endregion

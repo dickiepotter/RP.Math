@@ -994,91 +994,55 @@ namespace RP.Math
 
         #region Yaw, Pitch and Roll Operations
 
-        /// <summary>
-        /// Rotates a vector around the Y axis.
-        /// Change the yaw of a vector.
-        /// </summary>
-        /// <param name="v1">The Vector to be rotated</param>
-        /// <param name="rad">The angle to rotate the Vector around in radians</param>
-        /// <returns>Vector representing the rotation around the Y axis</returns>
-        /// <remarks>This assumes a cartesian axis system of up:Y, right:X, depth:-Z</remarks>
-        public static Vector Yaw(Vector v1, double rad)
+        // --- Convention-aware yaw / pitch / roll -------------------------------------------------
+        // These make no assumption about which Cartesian axis is up, right or forward: they rotate
+        // about the supplied convention's own Up / Right / Forward vector, using the library's single
+        // right-hand-rule rotation primitive (Quaternion.FromAxisAngle). The visual sense of a positive
+        // angle is therefore carried by the OrthogonalAxes (including its handedness), not fixed here.
+
+        /// <summary>Rotates a vector about a convention's <see cref="OrthogonalAxes.Up"/> (a yaw / heading change).</summary>
+        /// <param name="v1">The vector to rotate.</param>
+        /// <param name="angle">The angle to rotate by.</param>
+        /// <param name="axes">The coordinate convention supplying the rotation axis.</param>
+        public static Vector Yaw(Vector v1, Angle angle, OrthogonalAxes axes)
         {
-            return RotateY(v1, rad);
+            return Quaternion.FromAxisAngle(axes.Up, angle).Rotate(v1);
         }
 
-        /// <summary>
-        /// Rotates a vector around the Y axis.
-        /// Change the yaw of the vector.
-        /// </summary>
-        /// <param name="rad">The angle to rotate the Vector around in radians</param>
-        /// <returns>Vector representing the rotation around the Y axis</returns>
-        /// <implementation>
-        /// <see cref="Yaw(Vector, Double)"/>
-        /// Uses function Yaw(Vector, double) to avoid code duplication
-        /// </implementation>
-        /// <remarks>This assumes a cartesian axis system of up:Y, right:X, depth:-Z</remarks>
-        public Vector Yaw(double rad)
+        /// <summary>Rotates this vector about a convention's <see cref="OrthogonalAxes.Up"/> (a yaw / heading change).</summary>
+        public Vector Yaw(Angle angle, OrthogonalAxes axes)
         {
-            return Yaw(this, rad);
+            return Yaw(this, angle, axes);
         }
 
-        /// <summary>
-        /// Rotates a vector around the X axis.
-        /// Change the pitch of a vector.
-        /// </summary>
-        /// <param name="v1">The Vector to be rotated</param>
-        /// <param name="rad">The angle to rotate the Vector around in radians</param>
-        /// <returns>Vector representing the rotation around the X axis</returns>
-        /// <remarks>This assumes a cartesian axis system of up:Y, right:X, depth:-Z</remarks>
-        public static Vector Pitch(Vector v1, double rad)
+        /// <summary>Rotates a vector about a convention's <see cref="OrthogonalAxes.Right"/> (a pitch / elevation change).</summary>
+        /// <param name="v1">The vector to rotate.</param>
+        /// <param name="angle">The angle to rotate by.</param>
+        /// <param name="axes">The coordinate convention supplying the rotation axis.</param>
+        public static Vector Pitch(Vector v1, Angle angle, OrthogonalAxes axes)
         {
-            return RotateX(v1, rad);
+            return Quaternion.FromAxisAngle(axes.Right, angle).Rotate(v1);
         }
 
-        /// <summary>
-        /// Rotates a vector around the X axis.
-        /// Change the pitch of a vector.
-        /// </summary>
-        /// <param name="rad">The angle to rotate the Vector around in radians</param>
-        /// <returns>Vector representing the rotation around the X axis</returns>
-        /// <see cref="Pitch(Vector, Double)"/>
-        /// <implementation>
-        /// Uses function Pitch(Vector, double) to avoid code duplication
-        /// </implementation>
-        /// <remarks>This assumes a cartesian axis system of up:Y, right:X, depth:-Z</remarks>
-        public Vector Pitch(double rad)
+        /// <summary>Rotates this vector about a convention's <see cref="OrthogonalAxes.Right"/> (a pitch / elevation change).</summary>
+        public Vector Pitch(Angle angle, OrthogonalAxes axes)
         {
-            return Pitch(this, rad);
+            return Pitch(this, angle, axes);
         }
 
-        /// <summary>
-        /// Rotates a vector around the Z axis.
-        /// Change the roll of a vector.
-        /// </summary>
-        /// <param name="v1">The Vector to be rotated</param>
-        /// <param name="rad">The angle to rotate the Vector around in radians</param>
-        /// <returns>Vector representing the rotation around the Z axis</returns>
-        /// <remarks>This assumes a cartesian axis system of up:Y, right:X, depth:-Z</remarks>
-        public static Vector Roll(Vector v1, double rad)
+        /// <summary>Rotates a vector about a convention's <see cref="OrthogonalAxes.Forward"/> (a roll / bank change).</summary>
+        /// <param name="v1">The vector to rotate.</param>
+        /// <param name="angle">The angle to rotate by.</param>
+        /// <param name="axes">The coordinate convention supplying the rotation axis.</param>
+        public static Vector Roll(Vector v1, Angle angle, OrthogonalAxes axes)
         {
-            return RotateZ(v1, rad);
+            return Quaternion.FromAxisAngle(axes.Forward, angle).Rotate(v1);
         }
 
-        /// <summary>
-        /// Rotates a vector around the Z axis.
-        /// Change the roll of a vector.
-        /// </summary>
-        /// <param name="rad">The angle to rotate the vector around in radians</param>
-        /// <returns>Vector representing the rotation around the Z axis</returns>
-        /// <implementation>
-        /// <see cref="Roll(Vector, Double)"/>
-        /// Uses function Roll(Vector, double) to avoid code duplication
-        /// </implementation>
-        /// <remarks>This assumes a cartesian axis system of up:Y, right:X, depth:-Z</remarks>
-        public Vector Roll(double rad)
+        /// <summary>Rotates this vector about a convention's <see cref="OrthogonalAxes.Forward"/> (a roll / bank change).</summary>
+        public Vector Roll(Angle angle, OrthogonalAxes axes)
         {
-            return Roll(this, rad);
+            return Roll(this, angle, axes);
         }
 
         #endregion
@@ -1592,8 +1556,8 @@ namespace RP.Math
         /// <summary>Rotate this vector by a <see cref="Rotation"/> (Euler X/Y/Z).</summary>
         public Vector Rotate(Rotation rotation) => rotation.Rotate(this);
 
-        /// <summary>Rotate this vector by an <see cref="Attitude"/> (yaw/pitch/roll).</summary>
-        public Vector Rotate(Attitude attitude) => attitude.Rotate(this);
+        /// <summary>Rotate this vector by an <see cref="Attitude"/> (yaw/pitch/roll), interpreting yaw / pitch / roll in the given convention.</summary>
+        public Vector Rotate(Attitude attitude, OrthogonalAxes axes) => attitude.Rotate(this, axes);
 
         /// <summary>
         /// Transform this vector (as a point) by a 4x4 <see cref="Matrix"/>, i.e. <c>matrix * this</c>.

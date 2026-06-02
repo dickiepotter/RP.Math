@@ -346,15 +346,20 @@ namespace RP.Math
         }
 
         /// <summary>
-        /// Create a unit quaternion from yaw, pitch and roll angles.
-        /// Convention: yaw about the Y axis, pitch about the X axis, roll about the Z axis,
-        /// composed as <c>yaw * pitch * roll</c>.
+        /// Create a unit quaternion from yaw, pitch and roll angles interpreted in the given coordinate
+        /// convention: yaw about <see cref="OrthogonalAxes.Up"/>, pitch about <see cref="OrthogonalAxes.Right"/>,
+        /// roll about <see cref="OrthogonalAxes.Forward"/>, composed as <c>yaw * pitch * roll</c>.
         /// </summary>
-        public static Quaternion FromYawPitchRoll(Angle yaw, Angle pitch, Angle roll)
+        /// <remarks>
+        /// This assumes nothing about which Cartesian axis is up/right/forward — it reads them from
+        /// <paramref name="axes"/>, so the result follows that convention's handedness. Yaw, pitch and roll
+        /// are meaningless without a convention, so there is deliberately no axis-free overload.
+        /// </remarks>
+        public static Quaternion FromYawPitchRoll(Angle yaw, Angle pitch, Angle roll, OrthogonalAxes axes)
         {
-            Quaternion qYaw = FromAxisAngle(new Vector(0, 1, 0), yaw);
-            Quaternion qPitch = FromAxisAngle(new Vector(1, 0, 0), pitch);
-            Quaternion qRoll = FromAxisAngle(new Vector(0, 0, 1), roll);
+            Quaternion qYaw = FromAxisAngle(axes.Up, yaw);
+            Quaternion qPitch = FromAxisAngle(axes.Right, pitch);
+            Quaternion qRoll = FromAxisAngle(axes.Forward, roll);
             return qYaw * qPitch * qRoll;
         }
 

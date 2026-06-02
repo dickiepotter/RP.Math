@@ -40,9 +40,12 @@ namespace RP.Math
         {
         }
 
-        /// <summary>Construct a pose from a position and an <see cref="Attitude"/> (yaw/pitch/roll).</summary>
-        public Pose(Vector position, Attitude attitude)
-            : this(position, attitude.ToQuaternion())
+        /// <summary>
+        /// Construct a pose from a position and an <see cref="Attitude"/> (yaw/pitch/roll), interpreting the
+        /// yaw / pitch / roll in the given coordinate convention.
+        /// </summary>
+        public Pose(Vector position, Attitude attitude, OrthogonalAxes axes)
+            : this(position, attitude.ToQuaternion(axes))
         {
         }
 
@@ -77,9 +80,6 @@ namespace RP.Math
 
         /// <summary>The orientation expressed as a <see cref="Rotation"/> (Euler X/Y/Z).</summary>
         public Rotation RotationAsEuler { get { return RP.Math.Rotation.FromQuaternion(this.rotation); } }
-
-        /// <summary>The orientation expressed as an <see cref="Attitude"/> (yaw/pitch/roll).</summary>
-        public Attitude RotationAsAttitude { get { return RP.Math.Rotation.FromQuaternion(this.rotation).ToAttitude(); } }
 
         #endregion
 
