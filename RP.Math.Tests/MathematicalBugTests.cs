@@ -117,14 +117,15 @@ namespace RP.Math.Tests
         }
 
         // ------------------------------------------------------------------
-        // BUG 4 (open — tracked in README) — Angle.ToAngleValue reduces to the wrong range and sign.
+        // BUG 4 (fixed) — Angle.ToAngleValue reduced to the wrong range and sign.
         //
-        // Angle.cs:515-521 uses  rad > 2*pi ? IEEERemainder(rad, 2*pi) : rad.
-        // IEEERemainder returns a value in [-pi, pi], NOT [0, 2*pi).  For 540 degrees
-        // (= 3*pi) it returns IEEERemainder(3*pi, 2*pi) = -pi = -180 degrees.
+        // It used  rad > 2*pi ? IEEERemainder(rad, 2*pi) : rad.  IEEERemainder returns a
+        // value in [-pi, pi], NOT [0, 2*pi), so for 540 degrees (= 3*pi) it returned
+        // IEEERemainder(3*pi, 2*pi) = -pi = -180 degrees, contradicting the method's own
+        // docstring ("3*PI (540 degree) ==> PI (180 degree)").
         //
-        // The method's own docstring states the contract:  "3*PI (540 degree) ==>
-        // PI (180 degree)".  The implementation produces -180 instead of +180.
+        // Now uses the ordinary remainder  rad % 2*pi, which keeps the input's sign and
+        // maps 540 -> 180.  This test guards against regression.
         // ------------------------------------------------------------------
         [TestMethod, TestCategory("Bug")]
         public void Angle_ReduceFiveFortyDegrees_GivesOneEighty_PerOwnDocstring_Test()
@@ -186,13 +187,14 @@ namespace RP.Math.Tests
         }
 
         // ------------------------------------------------------------------
-        // BUG 7 (open) — Angle's unary minus does not numerically negate.
+        // BUG 7 (fixed) — Angle's unary minus did not numerically negate.
         //
-        // Angle.cs:301-307 defines  -a  as  a.IsClockwise() ? new Angle(-(2*pi - a.Rad)) : a, i.e. it
-        // returns the "counter-clockwise companion" rather than the arithmetic negative. For +90 deg
-        // (pi/2) it yields -270 deg (-3*pi/2) instead of -90 deg, and a + (-a) is not zero. Whatever
-        // the intended clockwise/counter-clockwise semantics, unary minus negating to a DIFFERENT
-        // magnitude is surprising and breaks the identity a + (-a) == 0.
+        // It used to define  -a  as  a.IsClockwise() ? new Angle(-(2*pi - a.Rad)) : a, i.e. it
+        // returned the "counter-clockwise companion" rather than the arithmetic negative. For +90 deg
+        // (pi/2) it yielded -270 deg (-3*pi/2) instead of -90 deg, so a + (-a) was not zero.
+        //
+        // Unary minus now negates the raw radians (new Angle(-a.Rad)); the companion behaviour moved to
+        // the named CounterClockwise()/Clockwise() methods. This test guards against regression.
         // ------------------------------------------------------------------
         [TestMethod, TestCategory("Bug")]
         public void Angle_UnaryMinus_NumericallyNegates_Test()

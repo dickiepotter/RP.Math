@@ -945,9 +945,11 @@ double rad = a.Rad;   // π/2
 Angle implicitlyRadians = 1.5;                // double → Angle (radians)
 ```
 
-**Arithmetic and comparison.** The usual operators are overloaded (`+`, `-`, `*`, `/`, unary `-`/`+`,
-`!` to flip clockwise/counter-clockwise, and the comparison operators). Equality is tolerance-aware via
-a shared static `Tolerance`.
+**Arithmetic and comparison.** The usual operators are overloaded (`+`, `-`, `*`, `/`, unary `-`, and
+the comparison operators). Unary `-` is a true negation — `-a` flips the sign of the value, so
+`a + (-a) == 0`. To re-express the *same* physical turn measured the other way round the circle, use
+the clearly-named `CounterClockwise()`/`Clockwise()` methods (or the `!` operator, which toggles between
+the two windings). Equality is tolerance-aware via a shared static `Tolerance`.
 
 **Classification.** `Angle` can tell you what *kind* of angle it is — `IsAcute`, `IsRightAngle`,
 `IsObtuse`, `IsStraitAngle`, `IsReflex`, `IsFullOrZeroAngle`, `IsOblique`, `IsClockwise` — and how two
@@ -1901,44 +1903,37 @@ Two cautions, which is exactly why this is filed under *future* and not *now*:
   themselves, and only then lift the repeated ones into a generic. The rule is that the generics should
   be *extracted from* working pairs, never *imposed on* them.
 
-### A latent bug: `Angle`'s unary minus is not a negation
+### Fixed: `Angle`'s unary minus is now a true negation
 
-`Angle`'s unary `-` operator does **not** return the opposite angle — it returns a *coterminal*
-re-expression of the same turn with a negative winding label. For a positive (clockwise) `0.9` it yields
+`Angle`'s unary `-` operator used to **not** return the opposite angle — it returned a *coterminal*
+re-expression of the same turn with a negative winding label. For a positive (clockwise) `0.9` it yielded
 `0.9 − 2π` (≈ −5.383), which lands on the **same** orientation as `+0.9` (they differ by a full circle),
-not on the inverse `−0.9`. The operator's own doc comment states the intent: "90 degree angle ==> -270
-degree counter-clockwise" — and 90° and −270° are the same rotation.
+not on the inverse `−0.9`. That broke two expectations every *other* unary minus in the library upholds:
+it was not involutive (`-(-x) ≠ x`), and it disagreed with `Vector` and `Quaternion`, where unary `-`
+means "the opposite" — so building an inverse rotation as `-angle` produced a silently wrong axis-angle.
 
-This matters because it breaks two expectations every *other* unary minus in the library upholds:
-
-- **It is not involutive.** Negating twice does not round-trip: the second call sees an
-  already-counter-clockwise value and returns it unchanged, so `-(-x) ≠ x`.
-- **It disagrees with `Vector` and `Quaternion`,** where unary `-` means "the opposite". Code that
-  builds an inverse rotation as `-angle` therefore gets a silently wrong axis-angle; the correct inverse
-  is `new Angle(-a.Rad)` (negate the raw radians). The `!` operator and `CounterClockwise()` are built on
-  the same operator and inherit the behaviour.
-
-This is a **separate** latent bug from the pinned angle-reduction issue, and is deliberately left
-unfixed for now — recorded here so a future pass can decide whether unary `-` should become a true
-negation (and what that means for the comparison operators that currently lean on the coterminal `+`/`-`
-re-expression). It is pinned by `Angle_UnaryMinus_NumericallyNegates_Test` in `MathematicalBugTests`.
+Unary `-` now negates the raw radians (`new Angle(-a.Rad)`): `-a` is the true opposite, and
+`a + (-a) == 0`. The original "same physical turn, measured the other way round the circle" behaviour was
+not a defect of *concept*, only of being bound to the `-` symbol — it now lives in the clearly-named
+`CounterClockwise()`/`Clockwise()` methods, and the `!` operator (toggle the winding) is built on those.
+Guarded by `Angle_UnaryMinus_NumericallyNegates_Test` in `MathematicalBugTests`.
 
 (The convention-aware `Roll` vs literal `RotateZ` sign relationship — once listed here — is **not** a
 defect: it is the principled API being correct. It is documented as a strength under
 [Rotation: yaw, pitch and roll](#rotation-yaw-pitch-and-roll) and guarded by a positive test,
 `Roll_HonoursEachFramesForward_RelatingToLiteralRotateZ`.)
 
-### A latent bug: `Angle.ToAngleValue` reduces to the wrong range and sign
+### Fixed: `Angle.ToAngleValue` reduction now keeps sign and range
 
-`Angle.ToAngleValue` normalises an out-of-range radian with
+`Angle.ToAngleValue` used to normalise an out-of-range radian with
 `rad > 2π ? IEEERemainder(rad, 2π) : rad`. `IEEERemainder` returns a value in `[−π, π]`, **not** the
-`[0, 2π)` the type otherwise works in, so reducing `540°` (`3π`) gives `IEEERemainder(3π, 2π) = −π = −180°`
+`[0, 2π)` the type otherwise works in, so reducing `540°` (`3π`) gave `IEEERemainder(3π, 2π) = −π = −180°`
 — even though the method's own doc comment promises "3·PI (540 degree) ==> PI (180 degree)". The guard
-also only fires for `rad > 2π`, leaving large *negative* angles unreduced entirely.
+also only fired for `rad > 2π`, leaving large *negative* angles unreduced entirely.
 
-Reconciling this needs a single deliberate decision about the canonical range (`[0, 2π)` vs `(−π, π]`)
-because the comparison operators and the coterminal `+`/`−` re-expression all lean on it — which is why
-it is filed here rather than patched in isolation. Pinned by
+It now reduces with the ordinary remainder, `rad % 2π`, which **keeps the sign of the input** (so the
+clockwise/counter-clockwise winding is preserved) and maps `540° → 180°` exactly as the doc comment
+promises, while reducing large negative angles symmetrically. Guarded by
 `Angle_ReduceFiveFortyDegrees_GivesOneEighty_PerOwnDocstring_Test`.
 
 ---

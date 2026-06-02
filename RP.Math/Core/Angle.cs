@@ -293,17 +293,18 @@ namespace RP.Math
         }
 
         /// <summary>
-        /// Negation of an angle producing the counter-clockwise angle as a negative value
-        /// e.g. 90 degree angle ==> -270 degree counter-clockwise 
+        /// Arithmetic negation of an angle (flips the sign of the value).
+        /// e.g. 90 degree angle ==> -90 degrees, so that a + (-a) == 0.
         /// </summary>
+        /// <remarks>
+        /// To obtain the counter-clockwise measurement of the same physical direction
+        /// (e.g. 90 degrees ==> -270 degrees) use <see cref="CounterClockwise()"/>.
+        /// </remarks>
         /// <param name="a1">Angle to be negated</param>
-        /// <returns>Counter-clockwise angle as a negative value</returns>
+        /// <returns>The arithmetic negative of the angle</returns>
         public static Angle operator -(Angle a1)
         {
-            return
-                a1.IsClockwise() ?
-                    new Angle(-(Full_Angle_Rad - a1.Rad)) :
-                    a1;
+            return new Angle(-a1.Rad);
         }
 
         /// <summary>
@@ -328,7 +329,7 @@ namespace RP.Math
         /// <returns>Inverted angle</returns>
         public static Angle operator !(Angle a1)
         {
-            return a1.IsClockwise() ? -a1 : +a1;
+            return a1.IsClockwise() ? CounterClockwise(a1) : Clockwise(a1);
         }
 
         /// <summary>
@@ -514,10 +515,7 @@ namespace RP.Math
         /// <returns>Double precision radian value reduced to a valid angle</returns>
         public static double ToAngleValue(double rad)
         {
-            return
-                rad > Full_Angle_Rad ?
-                System.Math.IEEERemainder(rad, Full_Angle_Rad) :
-                rad;
+            return rad % Full_Angle_Rad;
         }
 
         /// <summary>
@@ -590,9 +588,19 @@ namespace RP.Math
 
         public Angle Clockwise() { return +this; }
 
-        public static Angle CounterClockwise(Angle a1) { return -a1; }
+        /// <summary>
+        /// The counter-clockwise measurement of the same physical direction, as a negative value.
+        /// e.g. 90 degrees clockwise ==> -270 degrees counter-clockwise (the same bearing, measured the other way).
+        /// </summary>
+        public static Angle CounterClockwise(Angle a1)
+        {
+            return
+                a1.IsClockwise() ?
+                    new Angle(-(Full_Angle_Rad - a1.Rad)) :
+                    a1;
+        }
 
-        public Angle CounterClockwise() { return -this; }
+        public Angle CounterClockwise() { return CounterClockwise(this); }
 
         public static Angle SmallAngle(Angle a1) { return a1.IsReflex() ? (!a1) : a1; }
 
