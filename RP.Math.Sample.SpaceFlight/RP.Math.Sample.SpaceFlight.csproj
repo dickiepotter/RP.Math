@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A MonoGame (WindowsDX = Direct3D 11) sample that exercises as much of the RP.Math
+    library as practical in a small 3rd-person "fly through alien spacecraft" scene.
+
+    Design goals:
+      * No XNA content pipeline. Geometry is generated procedurally and the HUD font is
+        rasterised at runtime with System.Drawing, so the whole thing runs with `dotnet run`.
+      * All the *maths* (camera, orientation, motion, collision, projection) is done with
+        RP.Math types; MonoGame is only the window + Direct3D renderer.
+  -->
+
+  <PropertyGroup>
+    <!-- net*-windows because WindowsDX uses WinForms for its window and we use System.Drawing for the HUD font. -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>RP.Math.Sample.SpaceFlight</RootNamespace>
+    <AssemblyName>RP.Math.Sample.SpaceFlight</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MonoGame on Windows is layered on Direct3D 11 (the "WindowsDX" platform). -->
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.2.1105" />
+    <!-- Runtime font rasterisation for the telemetry HUD (Windows-only, which is fine for WindowsDX). -->
+    <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RP.Math\RP.Math.csproj" />
+  </ItemGroup>
+
+</Project>
