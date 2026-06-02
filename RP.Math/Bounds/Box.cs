@@ -65,7 +65,7 @@ namespace RP.Math
         /// </summary>
         public static Box FromCenterExtents(Vector center, Vector extents)
         {
-            Vector e = new Vector(Math.Abs(extents.X), Math.Abs(extents.Y), Math.Abs(extents.Z));
+            Vector e = extents.AbsComponents();
             return new Box(center - e, center + e);
         }
 

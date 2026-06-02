@@ -568,8 +568,10 @@ the face points away from the viewer (a negative dot product with the line of si
 overload).
 
 **Component utilities.** `SumComponents`, `SumComponentSqrs`, `PowComponents`, `SqrtComponents`,
-`SqrComponents`, `Abs`, and `Round` (with digit/`MidpointRounding` overloads) apply arithmetic to each
-component independently.
+`SqrComponents`, `AbsComponents`, and `Round` (with digit/`MidpointRounding` overloads) apply arithmetic
+to each component independently. (Note that `Abs` is *not* one of these: it returns the vector's
+**magnitude** `|v|` — the scalar norm, the way `Math.Abs` gives the size of a number — so it is an alias
+for `Magnitude`. Use `AbsComponents` for the per-axis `(|x|, |y|, |z|)`.)
 
 ### Operations added for modern, everyday use
 
@@ -822,6 +824,16 @@ when the line is parallel (no single crossing). `IntersectLineParameter` returns
 
 ```csharp
 if (plane.TryIntersectLine(linePoint, lineDirection, out Vector where)) { /* … */ }
+```
+
+**Plane intersection.** Two planes that are not parallel always meet in an infinite [`Line`](#the-line-family-line-ray-linesegment-chord).
+`TryIntersect(other, out Line line)` returns it, reporting `false` when the planes are parallel (whether
+disjoint or coincident — neither gives a single line). The line's direction is the cross product of the
+two normals (`n₁ × n₂`); a point on it is found by solving the small 2×2 system that forces a blend of
+the two normals to satisfy both plane equations:
+
+```csharp
+if (Plane.XY.TryIntersect(Plane.XZ, out Line axis)) { /* axis is the X axis */ }
 ```
 
 **Comparing planes.** `==` is an exact component-wise comparison of the four coefficients, but two

@@ -1588,26 +1588,25 @@ namespace RP.Math
         #region Abs Operations
 
         /// <summary>
-        /// Find the absolute value of a vector.
-        /// Find the magnitude of a vector.
+        /// The absolute value of a vector — its <see cref="Magnitude"/> (the Euclidean norm <c>|v|</c>),
+        /// the direct generalization of <c>Math.Abs</c> on a scalar. For the component-wise absolute value
+        /// <c>(|x|, |y|, |z|)</c> use <see cref="AbsComponents(Vector)"/> instead.
         /// </summary>
-        /// <returns>A Vector representing the absolute values of the vector</returns>
-        /// <implementation>
-        /// An alternative interface to the magnitude property
-        /// </implementation>
+        /// <param name="v1">The vector whose magnitude to find</param>
+        /// <returns>The magnitude of the vector</returns>
+        /// <implementation>An alternative interface to the <see cref="Magnitude"/> property.</implementation>
         public static Double Abs(Vector v1)
         {
             return v1.Magnitude;
         }
 
         /// <summary>
-        /// Find the absolute value of a vector.
-        /// Find the magnitude of a vector.
+        /// The absolute value of this vector — its <see cref="Magnitude"/> (the Euclidean norm <c>|v|</c>),
+        /// the direct generalization of <c>Math.Abs</c> on a scalar. For the component-wise absolute value
+        /// <c>(|x|, |y|, |z|)</c> use <see cref="AbsComponents()"/> instead.
         /// </summary>
-        /// <returns>A Vector representing the absolute values of the vector</returns>
-        /// <implementation>
-        /// An alternative interface to the magnitude property
-        /// </implementation>
+        /// <returns>The magnitude of the vector</returns>
+        /// <implementation>An alternative interface to the <see cref="Magnitude"/> property.</implementation>
         public double Abs()
         {
             return this.Magnitude;
@@ -1742,6 +1741,34 @@ namespace RP.Math
         public Vector SqrComponents()
         {
             return SqrComponents(this);
+        }
+
+        /// <summary>
+        /// The component-wise absolute value of a vector: <c>(|x|, |y|, |z|)</c>.
+        /// </summary>
+        /// <param name="v1">The vector whose components to take the absolute value of</param>
+        /// <returns>A vector of the absolute values of each component</returns>
+        /// <implementation>
+        /// The per-axis counterpart to <see cref="Abs(Vector)"/>, which returns the single magnitude. This
+        /// is what graphics libraries usually mean by the "abs" of a vector, and is handy for extents and
+        /// axis-aligned box half-sizes.
+        /// </implementation>
+        public static Vector AbsComponents(Vector v1)
+        {
+            return new Vector(Math.Abs(v1.X), Math.Abs(v1.Y), Math.Abs(v1.Z));
+        }
+
+        /// <summary>
+        /// The component-wise absolute value of this vector: <c>(|x|, |y|, |z|)</c> — the per-axis
+        /// counterpart to <see cref="Abs()"/>, which returns the single magnitude.
+        /// </summary>
+        /// <returns>A vector of the absolute values of each component</returns>
+        /// <implementation>
+        /// <see cref="AbsComponents(Vector)"/>
+        /// </implementation>
+        public Vector AbsComponents()
+        {
+            return AbsComponents(this);
         }
 
         #region Round Components

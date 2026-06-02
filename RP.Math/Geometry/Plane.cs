@@ -309,6 +309,61 @@ namespace RP.Math
 
         #endregion
 
+        #region Plane intersection
+
+        /// <summary>
+        /// Intersect this plane with another. Two non-parallel planes always meet in an infinite
+        /// <see cref="Line"/>. Returns true and that line of intersection; false when the planes are
+        /// parallel — whether disjoint or coincident, neither case yields a single line.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Maths, in two steps. First the <b>direction</b>: the line lies in both planes, so it is
+        /// perpendicular to both normals at once — exactly the cross product <c>u = n₁ × n₂</c>. When that
+        /// is the zero vector the normals are parallel, so the planes are too and there is no unique line.
+        /// </para>
+        /// <para>
+        /// Then one <b>point</b> on the line. Look for the point written as a blend of the two normals,
+        /// <c>p = a·n₁ + b·n₂</c> (the point on the line closest to the origin), and require it to lie on
+        /// both planes: <c>n₁·p = −D₁</c> and <c>n₂·p = −D₂</c>. Substituting gives a 2×2 system in
+        /// <c>a, b</c> whose determinant is <c>|n₁|²|n₂|² − (n₁·n₂)²</c> — which is just <c>|u|²</c> (the
+        /// Lagrange identity), so it is non-zero precisely when the planes are not parallel. Solving it
+        /// (Cramer's rule) gives the point. The normals need not be unit length; the algebra carries their
+        /// scale through.
+        /// </para>
+        /// </remarks>
+        public bool TryIntersect(Plane other, out Line intersection)
+        {
+            Vector n1 = this.Normal;
+            Vector n2 = other.Normal;
+            Vector direction = n1.CrossProduct(n2);
+
+            double det = direction.MagnitudeSquared; // |n1 × n2|² — zero exactly when the planes are parallel
+            if (det == 0)
+            {
+                intersection = new Line(new Vector(0, 0, 0), new Vector(0, 0, 0)); // degenerate: no line
+                return false;
+            }
+
+            // Right-hand sides: the plane equation is n·p + D = 0, so n·p = −D.
+            double d1 = -this.d;
+            double d2 = -other.d;
+
+            double n11 = n1.DotProduct(n1);
+            double n12 = n1.DotProduct(n2);
+            double n22 = n2.DotProduct(n2);
+
+            // Solve [n11 n12; n12 n22][a; b] = [d1; d2] by Cramer's rule (det = n11·n22 − n12² = |u|²).
+            double a = ((d1 * n22) - (d2 * n12)) / det;
+            double b = ((d2 * n11) - (d1 * n12)) / det;
+
+            Vector point = (a * n1) + (b * n2);
+            intersection = new Line(point, direction);
+            return true;
+        }
+
+        #endregion
+
         #region Predicates
 
         /// <summary>Whether the plane is degenerate (its normal has zero magnitude).</summary>
