@@ -1,7 +1,7 @@
 @page "/"
 @using System.Linq
 
-<PageTitle>RP.Math.Vector — Visualizer</PageTitle>
+<PageTitle>RP.Math — Visualizer</PageTitle>
 
 @{
     // Build the context and run the selected operation against the REAL Vector class.
@@ -19,7 +19,9 @@
 <header class="masthead">
     <h1>RP.<span>Math</span> Visualizer</h1>
     <p>Drag to orbit the scene, drag a vector's tip or use the sliders, and watch every operation
-       recompute live — running the actual compiled <code>RP.Math</code> library in your browser.</p>
+       recompute live — running the actual compiled <code>RP.Math</code> library in your browser.
+       Covers vector algebra, the rotation types (Quaternion, Matrix, AxisAngle, Rotation, Pose),
+       and line/ray/segment/plane geometry.</p>
 </header>
 
 <div class="workspace">
@@ -54,11 +56,18 @@
             @AxisLine(0, AxisLen, 0, "ah-y", "#4e9a4e", "Y")
             @AxisLine(0, 0, AxisLen, "ah-z", "#4472c4", "Z")
 
+            @* auxiliary geometry contributed by the operation (lines, planes, points…) *@
+            @if (res?.Extras is { } extras) { foreach (var it in extras) { @SceneExtra(it) } }
+
             @* vectors *@
             @VectorArrow(ctx.A, "ah-a", "#ffce47", "A", "A")
             @if (showB) { @VectorArrow(ctx.B, "ah-b", "#ff7ac6", "B", "B") }
             @if (showC) { @VectorArrow(ctx.C, "ah-c", "#b39ddb", "C", null) }
-            @if (resultVec is { } rv) { @VectorArrow(rv, "ah-r", "#4be0a8", "result", null, dashed: true) }
+            @if (resultVec is { } rv)
+            {
+                @if (res!.PointResult) { @PointMarker(rv, "#4be0a8", "result") }
+                else { @VectorArrow(rv, "ah-r", "#4be0a8", "result", null, dashed: true) }
+            }
         </svg>
 
         <div class="scene-tools">
@@ -266,6 +275,126 @@
         b.AddContent(21, label);
         b.CloseElement();
     };
+
+    private RenderFragment PointMarker(Vector v, string color, string? label) => b =>
+    {
+        var p = cam.Project(v.X, v.Y, v.Z);
+        b.OpenElement(0, "circle");
+        b.AddAttribute(1, "cx", p.sx); b.AddAttribute(2, "cy", p.sy);
+        b.AddAttribute(3, "r", 5.5);
+        b.AddAttribute(4, "fill", color);
+        b.AddAttribute(5, "stroke", "#101418");
+        b.AddAttribute(6, "stroke-width", "1.5");
+        b.CloseElement();
+        if (label is not null)
+        {
+            b.OpenElement(7, "text");
+            b.AddAttribute(8, "x", p.sx + 9); b.AddAttribute(9, "y", p.sy + 4);
+            b.AddAttribute(10, "class", "vec-label");
+            b.AddAttribute(11, "fill", color);
+            b.AddContent(12, label);
+            b.CloseElement();
+        }
+    };
+
+    private RenderFragment SceneExtra(SceneItem it) => b =>
+    {
+        switch (it.Kind)
+        {
+            case SceneKind.Point:
+                b.AddContent(0, PointMarker(it.P0, it.Color, it.Label));
+                break;
+
+            case SceneKind.Segment:
+                DrawSegment(b, it.P0, it.P1, it.Color, it.Label, dashed: false);
+                break;
+
+            case SceneKind.Line:
+            {
+                var dir = it.P1.NormalizeOrDefault();
+                const double L = 6.0;
+                var tail = it.Forward ? it.P0 : it.P0 - dir * L;
+                var head = it.P0 + dir * L;
+                DrawSegment(b, tail, head, it.Color, it.Label, dashed: true);
+                break;
+            }
+
+            case SceneKind.Plane:
+                DrawPlane(b, it.P0, it.P1, it.Color, it.Label);
+                break;
+
+            case SceneKind.Triad:
+                DrawTriad(b, it.P0);
+                break;
+        }
+    };
+
+    private void DrawSegment(RenderTreeBuilder b, Vector a, Vector c, string color, string? label, bool dashed)
+    {
+        var pa = cam.Project(a.X, a.Y, a.Z);
+        var pc = cam.Project(c.X, c.Y, c.Z);
+        b.OpenElement(0, "line");
+        b.AddAttribute(1, "x1", pa.sx); b.AddAttribute(2, "y1", pa.sy);
+        b.AddAttribute(3, "x2", pc.sx); b.AddAttribute(4, "y2", pc.sy);
+        b.AddAttribute(5, "stroke", color);
+        b.AddAttribute(6, "stroke-width", "1.8");
+        if (dashed) b.AddAttribute(7, "stroke-dasharray", "5 4");
+        b.AddAttribute(8, "stroke-opacity", "0.85");
+        b.CloseElement();
+        if (label is not null)
+        {
+            b.OpenElement(9, "text");
+            b.AddAttribute(10, "x", pc.sx + 7); b.AddAttribute(11, "y", pc.sy - 3);
+            b.AddAttribute(12, "class", "vec-label");
+            b.AddAttribute(13, "fill", color);
+            b.AddContent(14, label);
+            b.CloseElement();
+        }
+    }
+
+    private void DrawPlane(RenderTreeBuilder b, Vector point, Vector normal, string color, string? label)
+    {
+        var n = normal.NormalizeOrDefault();
+        if (n.IsZero(1e-12)) return;
+
+        // Two orthonormal directions lying in the plane.
+        var seed = Math.Abs(n.X) < 0.9 ? new Vector(1, 0, 0) : new Vector(0, 0, 1);
+        var u = n.CrossProduct(seed).NormalizeOrDefault();
+        var v = n.CrossProduct(u).NormalizeOrDefault();
+        const double S = 3.2;
+
+        var corners = new[]
+        {
+            point + u * S + v * S,
+            point - u * S + v * S,
+            point - u * S - v * S,
+            point + u * S - v * S,
+        };
+        var pts = string.Join(" ", corners.Select(w =>
+        {
+            var p = cam.Project(w.X, w.Y, w.Z);
+            return $"{p.sx.ToString(CultureInfo.InvariantCulture)},{p.sy.ToString(CultureInfo.InvariantCulture)}";
+        }));
+
+        b.OpenElement(0, "polygon");
+        b.AddAttribute(1, "points", pts);
+        b.AddAttribute(2, "fill", color);
+        b.AddAttribute(3, "fill-opacity", "0.12");
+        b.AddAttribute(4, "stroke", color);
+        b.AddAttribute(5, "stroke-opacity", "0.5");
+        b.AddAttribute(6, "stroke-width", "1.2");
+        b.CloseElement();
+
+        // short normal stub so the orientation is readable
+        DrawSegment(b, point, point + n * 2.0, color, label, dashed: true);
+    }
+
+    private void DrawTriad(RenderTreeBuilder b, Vector origin)
+    {
+        DrawSegment(b, origin, origin + new Vector(1.5, 0, 0), "#c0504d", null, dashed: false);
+        DrawSegment(b, origin, origin + new Vector(0, 1.5, 0), "#4e9a4e", null, dashed: false);
+        DrawSegment(b, origin, origin + new Vector(0, 0, 1.5), "#4472c4", null, dashed: false);
+    }
 
     private static RenderFragment Marker(string id, string color) => b =>
     {

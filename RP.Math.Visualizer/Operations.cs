@@ -7,6 +7,37 @@ public enum ResultKind { Vector, Scalar, Boolean, Integer }
 /// <summary>The inputs the user can adjust, beyond vector A.</summary>
 public enum Input { B, C, Scalar, Angle, Control, Digits, Tolerance }
 
+/// <summary>Kinds of auxiliary geometry an operation can contribute to the 3D scene.</summary>
+public enum SceneKind { Point, Segment, Line, Plane, Triad }
+
+/// <summary>
+/// An extra primitive an operation asks the scene to draw alongside the A/B/C/result arrows —
+/// the line a point was projected onto, the plane it was reflected across, a rotated frame, etc.
+/// </summary>
+public sealed class SceneItem
+{
+    public SceneKind Kind { get; init; }
+    /// <summary>Primary anchor: the point, segment tail, line point, or plane point.</summary>
+    public Vector P0 { get; init; }
+    /// <summary>Secondary: segment head, line/ray direction, or plane normal. Unused for Point.</summary>
+    public Vector P1 { get; init; }
+    public string Color { get; init; } = "#9aa4b2";
+    public string? Label { get; init; }
+    /// <summary>For a <see cref="SceneKind.Ray"/>-style line that only extends forwards.</summary>
+    public bool Forward { get; init; }
+
+    public static SceneItem Point(Vector p, string color, string? label = null)
+        => new() { Kind = SceneKind.Point, P0 = p, Color = color, Label = label };
+    public static SceneItem Segment(Vector tail, Vector head, string color, string? label = null)
+        => new() { Kind = SceneKind.Segment, P0 = tail, P1 = head, Color = color, Label = label };
+    public static SceneItem Line(Vector point, Vector dir, string color, string? label = null, bool forward = false)
+        => new() { Kind = SceneKind.Line, P0 = point, P1 = dir, Color = color, Label = label, Forward = forward };
+    public static SceneItem Plane(Vector point, Vector normal, string color, string? label = null)
+        => new() { Kind = SceneKind.Plane, P0 = point, P1 = normal, Color = color, Label = label };
+    public static SceneItem Triad(Vector origin, string color, string? label = null)
+        => new() { Kind = SceneKind.Triad, P0 = origin, Color = color, Label = label };
+}
+
 /// <summary>The outcome of running an operation, tagged with how to present it.</summary>
 public sealed class OpResult
 {
@@ -15,6 +46,23 @@ public sealed class OpResult
     public double Scalar { get; private init; }
     public bool Boolean { get; private init; }
     public int Integer { get; private init; }
+
+    /// <summary>When true a Vector result is a position, drawn as a point marker rather than an arrow.</summary>
+    public bool PointResult { get; private init; }
+    /// <summary>Auxiliary geometry to draw in the scene (lines, planes, frames…).</summary>
+    public IReadOnlyList<SceneItem> Extras { get; private init; } = System.Array.Empty<SceneItem>();
+
+    public OpResult With(params SceneItem[] extras) => new()
+    {
+        Kind = Kind, Vector = Vector, Scalar = Scalar, Boolean = Boolean, Integer = Integer,
+        PointResult = PointResult, Extras = extras,
+    };
+
+    public OpResult AsPoint() => new()
+    {
+        Kind = Kind, Vector = Vector, Scalar = Scalar, Boolean = Boolean, Integer = Integer,
+        PointResult = true, Extras = Extras,
+    };
 
     public static OpResult Vec(Vector v) => new() { Kind = ResultKind.Vector, Vector = v };
     public static OpResult Num(double d) => new() { Kind = ResultKind.Scalar, Scalar = d };
@@ -223,6 +271,110 @@ public static class Operations
         Add("compareTo", "CompareTo(A, B)", "Comparison", "sign(|A| − |B|)",
             "Compares the vectors by magnitude: −1, 0 or 1.",
             c => OpResult.Int(c.A.CompareTo(c.B)), Input.B);
+
+        // ---- Orientation: rotate A about axis B by θ, via every rotation representation ----
+        // All of these answer the same question through a different RP.Math type, so dragging B
+        // (the axis) and the θ slider rotates the green result around it identically in each case.
+        Add("quatRotate", "Quaternion · A (axis B, θ)", "Orientation", "q ⊗ A ⊗ q⁻¹",
+            "Builds a unit quaternion from axis B and angle θ, then rotates A by it. The canonical, gimbal-free rotation.",
+            c => OpResult.Vec(Quaternion.FromAxisAngle(c.B, new Angle(c.AngleRad)).Rotate(c.A))
+                 .With(SceneItem.Line(new Vector(0, 0, 0), c.B, "#ff7ac6", "axis")),
+            Input.B, Input.Angle);
+        Add("axisAngleRotate", "AxisAngle · A (axis B, θ)", "Orientation", "rot(axis B, θ) · A",
+            "Rotates A about axis B by θ using the AxisAngle type (axis + magnitude) directly.",
+            c => OpResult.Vec(new AxisAngle(c.B, new Angle(c.AngleRad)).Rotate(c.A))
+                 .With(SceneItem.Line(new Vector(0, 0, 0), c.B, "#ff7ac6", "axis")),
+            Input.B, Input.Angle);
+        Add("matrixRotX", "Matrix Rx(θ) · A", "Orientation", "Rx(θ) · A",
+            "Multiplies A by a 3×3 rotation matrix about the X axis — the matrix form of the rotation.",
+            c => OpResult.Vec(Matrix.RotationMatrixAboutXAxis(new Angle(c.AngleRad)) * c.A), Input.Angle);
+        Add("matrixRotY", "Matrix Ry(θ) · A", "Orientation", "Ry(θ) · A",
+            "Multiplies A by a 3×3 rotation matrix about the Y axis.",
+            c => OpResult.Vec(Matrix.RotationMatrixAboutYAxis(new Angle(c.AngleRad)) * c.A), Input.Angle);
+        Add("matrixRotZ", "Matrix Rz(θ) · A", "Orientation", "Rz(θ) · A",
+            "Multiplies A by a 3×3 rotation matrix about the Z axis.",
+            c => OpResult.Vec(Matrix.RotationMatrixAboutZAxis(new Angle(c.AngleRad)) * c.A), Input.Angle);
+        Add("matrixScale", "Matrix scale · A (by B)", "Orientation", "diag(Bx,By,Bz) · A",
+            "Multiplies A by a non-uniform scaling matrix whose diagonal is B — stretches each axis independently.",
+            c => OpResult.Vec(Matrix.ScalingMatrix(c.B.X, c.B.Y, c.B.Z) * c.A), Input.B);
+        Add("rotationAboutX", "Rotation AboutX(θ) · A", "Orientation", "Rotation.AboutX(θ) · A",
+            "Rotates A about X using the Euler-style Rotation type (intrinsic X-Y-Z angles).",
+            c => OpResult.Vec(Rotation.AboutX(new Angle(c.AngleRad)).Rotate(c.A)), Input.Angle);
+        Add("rotationAboutY", "Rotation AboutY(θ) · A", "Orientation", "Rotation.AboutY(θ) · A",
+            "Rotates A about Y using the Rotation type.",
+            c => OpResult.Vec(Rotation.AboutY(new Angle(c.AngleRad)).Rotate(c.A)), Input.Angle);
+        Add("rotationAboutZ", "Rotation AboutZ(θ) · A", "Orientation", "Rotation.AboutZ(θ) · A",
+            "Rotates A about Z using the Rotation type.",
+            c => OpResult.Vec(Rotation.AboutZ(new Angle(c.AngleRad)).Rotate(c.A)), Input.Angle);
+        Add("quatSlerpRotate", "Slerp(I, q)·A (axis B, t)", "Orientation", "slerp(I, q)·A",
+            "Spherically interpolates from no rotation toward a 180° turn about axis B by t, then applies it to A — a smooth swing.",
+            c => OpResult.Vec(
+                    Quaternion.Slerp(new Quaternion(0, 0, 0, 1),
+                                     Quaternion.FromAxisAngle(c.B, new Angle(Math.PI)), c.Control)
+                              .Rotate(c.A))
+                 .With(SceneItem.Line(new Vector(0, 0, 0), c.B, "#ff7ac6", "axis")),
+            Input.B, Input.Control);
+        Add("poseApply", "Pose · A (rot axis B θ, move C)", "Orientation", "T(C)·R(B,θ) · A",
+            "Treats A as a local point: rotates it about axis B by θ, then translates by C — a full rigid transform (Pose).",
+            c => OpResult.Vec(Pose.FromAxisAngle(c.C, c.B, new Angle(c.AngleRad)).Apply(c.A))
+                 .AsPoint()
+                 .With(SceneItem.Line(new Vector(0, 0, 0), c.B, "#ff7ac6", "axis"),
+                       SceneItem.Point(c.C, "#b39ddb", "move C")),
+            Input.B, Input.C, Input.Angle);
+
+        // ---- Geometry primitives: lines, rays, segments and planes built from B/C ----
+        Add("lineClosest", "Closest point on line(0,B) to A", "Lines & Planes", "Line.ClosestPointTo(A)",
+            "Defines a line through the origin in direction B, then finds the point on it nearest A (the foot of the perpendicular).",
+            c => { var line = new Line(new Vector(0, 0, 0), c.B); var p = line.ClosestPointTo(c.A);
+                   return OpResult.Vec(p).AsPoint().With(
+                       SceneItem.Line(new Vector(0, 0, 0), c.B, "#ff7ac6", "line"),
+                       SceneItem.Segment(c.A, p, "#6f7a88", "perp")); },
+            Input.B);
+        Add("lineDistance", "Distance from A to line(0,B)", "Lines & Planes", "Line.DistanceTo(A)",
+            "The perpendicular distance from A to the line through the origin along B.",
+            c => { var line = new Line(new Vector(0, 0, 0), c.B);
+                   return OpResult.Num(line.DistanceTo(c.A)).With(
+                       SceneItem.Line(new Vector(0, 0, 0), c.B, "#ff7ac6", "line"),
+                       SceneItem.Segment(c.A, line.ClosestPointTo(c.A), "#6f7a88")); },
+            Input.B);
+        Add("rayClosest", "Closest point on ray(0,B) to A", "Lines & Planes", "Ray.ClosestPointTo(A)",
+            "Like the line version but the ray only extends forwards from the origin along B, so the nearest point is clamped at the origin.",
+            c => { var ray = new Ray(new Vector(0, 0, 0), c.B); var p = ray.ClosestPointTo(c.A);
+                   return OpResult.Vec(p).AsPoint().With(
+                       SceneItem.Line(new Vector(0, 0, 0), c.B, "#ff7ac6", "ray", forward: true),
+                       SceneItem.Segment(c.A, p, "#6f7a88", "perp")); },
+            Input.B);
+        Add("segClosest", "Closest point on segment B→C to A", "Lines & Planes", "LineSegment.ClosestPointTo(A)",
+            "Finds the point on the finite segment from B to C that is nearest A (clamped to the endpoints).",
+            c => { var seg = new LineSegment(c.B, c.C); var p = seg.ClosestPointTo(c.A);
+                   return OpResult.Vec(p).AsPoint().With(
+                       SceneItem.Segment(c.B, c.C, "#ff7ac6", "segment"),
+                       SceneItem.Segment(c.A, p, "#6f7a88", "perp")); },
+            Input.B, Input.C);
+        Add("segInterpolate", "Point along segment B→C (t)", "Lines & Planes", "LineSegment.Interpolate(t)",
+            "Walks from B (t = 0) to C (t = 1) along the segment.",
+            c => { var seg = new LineSegment(c.B, c.C); var p = seg.Interpolate(c.Control);
+                   return OpResult.Vec(p).AsPoint().With(SceneItem.Segment(c.B, c.C, "#ff7ac6", "segment")); },
+            Input.B, Input.C, Input.Control);
+        Add("planeProject", "Project A onto plane(0, n=B)", "Lines & Planes", "Plane.ClosestPoint(A)",
+            "Drops A perpendicularly onto the plane through the origin whose normal is B (A's shadow on the plane).",
+            c => { var plane = Plane.FromPointNormal(new Vector(0, 0, 0), c.B); var p = plane.ClosestPoint(c.A);
+                   return OpResult.Vec(p).AsPoint().With(
+                       SceneItem.Plane(new Vector(0, 0, 0), c.B, "#4472c4", "plane"),
+                       SceneItem.Segment(c.A, p, "#6f7a88", "drop")); },
+            Input.B);
+        Add("planeReflect", "Reflect A across plane(0, n=B)", "Lines & Planes", "Plane.Reflect(A)",
+            "Mirrors A through the plane through the origin with normal B (a bounce off the surface).",
+            c => { var plane = Plane.FromPointNormal(new Vector(0, 0, 0), c.B);
+                   return OpResult.Vec(plane.Reflect(c.A)).AsPoint().With(
+                       SceneItem.Plane(new Vector(0, 0, 0), c.B, "#4472c4", "plane")); },
+            Input.B);
+        Add("planeSignedDist", "Signed distance A to plane(0, n=B)", "Lines & Planes", "Plane.SignedDistanceTo(A)",
+            "How far A sits from the origin-plane with normal B; positive on the side the normal points to, negative behind it.",
+            c => { var plane = Plane.FromPointNormal(new Vector(0, 0, 0), c.B);
+                   return OpResult.Num(plane.SignedDistanceTo(c.A)).With(
+                       SceneItem.Plane(new Vector(0, 0, 0), c.B, "#4472c4", "plane")); },
+            Input.B);
 
         return ops;
     }

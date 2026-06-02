@@ -1235,7 +1235,7 @@
 
             result.X.Should().Be(0, "X should be rounded down");
             result.Y.Should().Be(1, "Y should be rounded up");
-            result.Y.Should().Be(1, "Z should be rounded up");
+            result.Z.Should().Be(1, "Z should be rounded up");
         }
 
         #endregion

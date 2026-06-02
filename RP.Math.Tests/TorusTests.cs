@@ -19,8 +19,8 @@ namespace RP.Math.Tests
             var t = new Torus(3, 1);
             t.OuterRadius.Should().Be(4);
             t.InnerRadius.Should().Be(2);
-            t.Volume.Should().BeApproximately(2 * Math.PI * Math.PI * 3 * 1, Tol);
-            t.SurfaceArea.Should().BeApproximately(4 * Math.PI * Math.PI * 3 * 1, Tol);
+            t.Volume.Should().BeApproximately(2 * Math.PI * Math.PI * 3 * 1 * 1, Tol);   // 2π²Rr² (r² written out)
+            t.SurfaceArea.Should().BeApproximately(4 * Math.PI * Math.PI * 3 * 1, Tol);  // 4π²Rr
         }
 
         [TestMethod, TestCategory("Placed")]

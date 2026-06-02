@@ -4,16 +4,21 @@ A small **Blazor WebAssembly** app for exploring the `RP.Math` library. It runs 
 **actual compiled library** in the browser, so the visualisation and every result reflect the
 real code — not a re-implementation.
 
-![Operations covered](https://img.shields.io/badge/operations-38-4be0a8)
+![Operations covered](https://img.shields.io/badge/operations-67-4be0a8)
 
 ## What it does
 
-- Pick any operation (add, dot, cross, projection, rejection, reflection, rotations, interpolate,
-  predicates, …) from a grouped list — it covers the public surface of the `Vector` type.
+- Pick any operation from a grouped list. Coverage spans several `RP.Math` types:
+  - **Vector** — arithmetic, products, geometry, components, predicates, comparison.
+  - **Rotation types** — `Quaternion`, `Matrix`, `AxisAngle`, `Rotation` and `Pose`, each rotating
+    (or transforming) **A** about axis **B** so you can watch the representations agree.
+  - **Lines & planes** — `Line`, `Ray`, `LineSegment` and `Plane` built from **B**/**C**, with
+    closest-point, projection, reflection and signed-distance queries drawn in the scene.
 - Adjust vectors **A**, **B**, **C** with sliders/number boxes, or **drag a vector's tip** in the
   3D scene. Drag the background to **orbit**, scroll to **zoom**.
-- See the result recompute live: the result vector is drawn in the scene, and scalars / booleans /
-  integers are shown in the result card alongside the formula and a plain-English explanation.
+- See the result recompute live: vectors are drawn as arrows, positions as point markers, and the
+  defining line/plane/segment is drawn alongside; scalars / booleans / integers appear in the result
+  card next to the formula and a plain-English explanation.
 
 ## Run it
 
