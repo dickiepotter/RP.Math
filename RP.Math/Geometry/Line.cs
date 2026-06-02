@@ -262,6 +262,15 @@ namespace RP.Math
             return new Ray(Point, Direction);
         }
 
+        /// <summary>
+        /// The forward half of this line as a <see cref="Ray"/> (see <see cref="ToRay"/>). Explicit
+        /// because it discards the backward half — it is a narrowing of what the value represents.
+        /// </summary>
+        public static explicit operator Ray(Line line)
+        {
+            return line.ToRay();
+        }
+
         #endregion
 
         #region ToString

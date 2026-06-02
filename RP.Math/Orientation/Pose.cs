@@ -238,6 +238,22 @@ namespace RP.Math
             rotation = this.rotation;
         }
 
+        /// <summary>
+        /// Build a pose from a (position, orientation) tuple. Explicit because, as with the constructor,
+        /// the orientation quaternion is normalized — a non-unit quaternion does not round-trip
+        /// unchanged, so the conversion is not a pure repack.
+        /// </summary>
+        public static explicit operator Pose((Vector position, Quaternion orientation) value)
+        {
+            return new Pose(value.position, value.orientation);
+        }
+
+        /// <summary>Read out the (position, orientation) pair.</summary>
+        public static implicit operator (Vector Position, Quaternion Orientation)(Pose p)
+        {
+            return (p.Position, p.Rotation);
+        }
+
         /// <summary>A string of the form <c>[position, rotation]</c>.</summary>
         public override string ToString()
         {

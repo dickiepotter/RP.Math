@@ -19,6 +19,7 @@ more.*
 - [What this project is for](#what-this-project-is-for)
 - [Conventions used across the library](#conventions-used-across-the-library)
 - [The types at a glance](#the-types-at-a-glance)
+- [Converting between types](#converting-between-types)
 - [`Vector` — the foundation](#vector--the-foundation)
 - [The line family: `Line`, `Ray`, `LineSegment`, `Chord`](#the-line-family-line-ray-linesegment-chord)
 - [`Plane`](#plane)
@@ -148,6 +149,83 @@ allowed), a ray clamps behind its start, and a segment clamps at both ends.
 The three **orientation** types (`Rotation`, `Attitude`, `Quaternion`) all describe the same thing —
 which way something is facing — at different trade-offs of readability versus robustness. They convert
 freely between one another, and `Pose` bundles an orientation together with a position.
+
+---
+
+## Converting between types
+
+The library converts between types two ways, and the choice of which is deliberate:
+
+- **Cast operators** (`(Target)x`, or implicit) are used only for *value-representation* changes — the
+  same value in a different container (`double` ↔ `Angle`, a tuple ↔ a `Vector`), a re-encoding of the
+  same rotation, or a lossy *widening* within a family. They never hide a coordinate-convention choice.
+- **Named `To*` / `From*` methods** are used for everything else: conversions that do real computation,
+  or that need a parameter the language can't supply through a cast — above all anything involving
+  yaw/pitch/roll, which always takes an [`OrthogonalAxes`](#orthogonalaxes) so no convention is ever
+  assumed silently.
+
+The rule of thumb for the casts themselves: **implicit** when the conversion is total and loses nothing
+the type cares about; **explicit** when it narrows precision, decomposes, asserts a precondition, or
+discards information (so you write the cast and take responsibility for it).
+
+### Cast operators
+
+| From | To | Implicit / explicit | Why |
+|------|----|--------------------|-----|
+| `double`, `float`, `int` | `Angle` | implicit | a bare number is treated as radians |
+| `Angle` | `double` | implicit | exact (radians) |
+| `Angle` | `float`, `int` | **explicit** | narrows precision |
+| `(double, double, double)` | `Vector` | implicit | repack |
+| `Vector` | `(double, double, double)` | implicit | repack |
+| `(double, double, double, double)` | `Quaternion` | implicit | repack |
+| `Quaternion` | `(double, double, double, double)` | implicit | repack |
+| `(Vector, Angle)` | `AxisAngle` | **explicit** | normalises the axis (not a pure repack) |
+| `AxisAngle` | `(Vector, Angle)` | implicit | repack (reads the stored unit axis) |
+| `(Vector, Quaternion)` | `Pose` | **explicit** | normalises the orientation (not a pure repack) |
+| `Pose` | `(Vector, Quaternion)` | implicit | repack |
+| `double` | `ExpandedDouble` | **explicit** | decomposes into sign/exponent/mantissa |
+| `Quaternion` ⇄ `AxisAngle` ⇄ `Rotation` ⇄ `Matrix` | (see mesh below) | **explicit** | re-encodes the same rotation |
+| `LineSegment` | `Line`, `Ray` | **explicit** | widens — drops the segment's ends |
+| `Line` | `Ray` | **explicit** | narrows — keeps only the forward half |
+| `Ray` | `Line` | **explicit** | widens — forgets where the ray starts/stops |
+
+### The orientation re-encoding mesh
+
+`Quaternion`, `AxisAngle`, `Rotation` (Euler X/Y/Z) and the rotation `Matrix` are four encodings of the
+*same* turn, so every pair interconverts **explicitly** and losslessly (each cast is a thin alias over
+the existing `To*`/`From*` method, routing through the quaternion where needed). Casting **from**
+`Matrix` additionally asserts its 3×3 block is a pure rotation (scale/skew is ignored).
+
+```
+            (Quaternion)
+           ╱     │      ╲
+   (AxisAngle)───┼───(Matrix)      every edge is a two-way explicit cast
+           ╲     │      ╱          e.g.  var aa = (AxisAngle)q;  var m = (Matrix)aa;
+            (Rotation)
+```
+
+`Attitude` (yaw/pitch/roll) is **not** in the mesh: it only has meaning relative to an `OrthogonalAxes`,
+so it converts through `Attitude.ToQuaternion(axes)` / `Attitude.FromQuaternion(q, axes)` — methods, not
+casts. `Pose` is also method/constructor-only for its rotation, because it carries a position too; its
+*tuple* cast above is separate — reading a pose out is a lossless repack, but building one in is explicit
+because the orientation is normalised.
+
+### Named conversion methods (not casts)
+
+These remain methods on purpose — either because they take a convention, or read more clearly named:
+
+| Conversion | API |
+|-----------|-----|
+| `Attitude` ⇄ `Quaternion` (convention-aware) | `Attitude.ToQuaternion(axes)` / `Attitude.FromQuaternion(q, axes)` |
+| `AxisAngle` ⇄ `Attitude` (convention-aware) | `AxisAngle.FromAttitude(attitude, axes)` |
+| `Quaternion` → axis & angle | `Quaternion.ToAxisAngle(out axis, out angle)` |
+| `Quaternion` from an axis & angle | `Quaternion.FromAxisAngle(axis, angle)` |
+| `Pose` from a position + any orientation type | `new Pose(position, rotation \| attitude+axes \| axisAngle)` |
+| `Plane` from geometry | `Plane.FromPointNormal(...)`, `Plane.FromThreePoints(...)` |
+| line-family widenings (named form of the casts) | `Line.ToRay()`, `Ray.ToLine()`, `LineSegment.ToLine()` / `ToRay()` |
+
+> Every cast above has a corresponding `To*`/`From*` method behind it, so nothing is *only* reachable
+> through an operator — the cast is sugar, the method is the contract.
 
 ---
 

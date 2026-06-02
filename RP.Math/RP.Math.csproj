@@ -16,8 +16,8 @@
 
     <!-- NuGet package -->
     <PackageId>RP.Math</PackageId>
-    <Description>Numeric helpers (double tolerance comparison and ULP / expanded-double utilities) underpinning the RP.Math.Vector3 type.</Description>
-    <PackageTags>math;double;tolerance;ulp;numerics</PackageTags>
+    <Description>A small, immutable 3D maths library for .NET: vectors and matrices; quaternions, axis-angle, Euler and yaw/pitch/roll rotations with explicit coordinate-convention frames; angles; lines, rays, segments, chords and planes; poses; and a library of conceptual and placed shapes — backed by supporting numeric helpers (tolerant double comparison, ULP and expanded-double utilities, and real polynomial-root solvers).</Description>
+    <PackageTags>math;geometry;3d;vector;matrix;quaternion;rotation;linear-algebra;shapes;numerics</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
   </PropertyGroup>

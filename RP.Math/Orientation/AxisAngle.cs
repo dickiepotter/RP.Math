@@ -126,6 +126,46 @@ namespace RP.Math
 
         #endregion
 
+        #region Conversion operators
+
+        // The orientation types are different encodings of the same turn, so they interconvert exactly
+        // but are NOT the same value — hence these are explicit (you ask for the re-encoding), each a
+        // thin alias over the To*/From* methods above. Attitude is excluded: it needs an OrthogonalAxes
+        // convention, which a parameterless cast cannot supply.
+
+        /// <summary>The equivalent unit <see cref="Quaternion"/> (see <see cref="ToQuaternion"/>).</summary>
+        public static explicit operator Quaternion(AxisAngle a) { return a.ToQuaternion(); }
+
+        /// <summary>The equivalent Euler <see cref="Rotation"/> (see <see cref="ToRotation"/>).</summary>
+        public static explicit operator Rotation(AxisAngle a) { return a.ToRotation(); }
+
+        /// <summary>The equivalent 4x4 rotation <see cref="Matrix"/> (see <see cref="ToMatrix"/>).</summary>
+        public static explicit operator Matrix(AxisAngle a) { return a.ToMatrix(); }
+
+        #endregion
+
+        #region Tuple conversion
+
+        // A Deconstruct(out Vector, out Angle) already lives in the Standard functions region below.
+
+        /// <summary>
+        /// Build from an (axis, angle) tuple. Explicit because, as with the constructor, the axis is
+        /// normalized — a non-unit axis in the tuple does not round-trip unchanged, so the conversion
+        /// is not a pure repack.
+        /// </summary>
+        public static explicit operator AxisAngle((Vector axis, Angle angle) value)
+        {
+            return new AxisAngle(value.axis, value.angle);
+        }
+
+        /// <summary>Read out the (unit axis, angle) pair.</summary>
+        public static implicit operator (Vector Axis, Angle Angle)(AxisAngle a)
+        {
+            return (a.Axis, a.Angle);
+        }
+
+        #endregion
+
         #region Inverse and apply
 
         /// <summary>

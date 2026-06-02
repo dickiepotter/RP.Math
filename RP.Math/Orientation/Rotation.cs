@@ -188,6 +188,22 @@ namespace RP.Math
 
         #endregion
 
+        #region Conversion operators
+
+        // Re-encodings into the other orientation types. Explicit (a representation change, not the same
+        // value) and lossless; each is a thin alias over an existing conversion method.
+
+        /// <summary>The equivalent unit <see cref="Quaternion"/> (see <see cref="ToQuaternion"/>).</summary>
+        public static explicit operator Quaternion(Rotation r) { return r.ToQuaternion(); }
+
+        /// <summary>The equivalent <see cref="AxisAngle"/> (see <see cref="AxisAngle.FromRotation"/>).</summary>
+        public static explicit operator AxisAngle(Rotation r) { return AxisAngle.FromRotation(r); }
+
+        /// <summary>The equivalent 4x4 rotation <see cref="Matrix"/> (see <see cref="ToMatrix"/>).</summary>
+        public static explicit operator Matrix(Rotation r) { return r.ToMatrix(); }
+
+        #endregion
+
         #region Apply
 
         /// <summary>Rotate a vector by this rotation.</summary>

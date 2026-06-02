@@ -110,6 +110,15 @@ namespace RP.Math
             return new Line(Origin, Direction);
         }
 
+        /// <summary>
+        /// The infinite <see cref="Line"/> this ray lies on (see <see cref="ToLine"/>). Explicit because
+        /// it widens the ray to both directions — the result no longer knows where the ray stopped.
+        /// </summary>
+        public static explicit operator Line(Ray ray)
+        {
+            return ray.ToLine();
+        }
+
         #endregion
 
         #region ToString

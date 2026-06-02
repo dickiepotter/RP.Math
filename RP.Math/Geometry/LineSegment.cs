@@ -175,6 +175,24 @@ namespace RP.Math
             return new Ray(Tail, Head - Tail);
         }
 
+        /// <summary>
+        /// The infinite <see cref="Line"/> this segment lies on (see <see cref="ToLine"/>). Explicit
+        /// because it drops the segment's extent — both ends are forgotten.
+        /// </summary>
+        public static explicit operator Line(LineSegment segment)
+        {
+            return segment.ToLine();
+        }
+
+        /// <summary>
+        /// A <see cref="Ray"/> from the <see cref="Tail"/> through the <see cref="Head"/> and on forever
+        /// (see <see cref="ToRay"/>). Explicit because it drops the head, keeping only the tail and direction.
+        /// </summary>
+        public static explicit operator Ray(LineSegment segment)
+        {
+            return segment.ToRay();
+        }
+
         #endregion
 
         #region Producing new segments

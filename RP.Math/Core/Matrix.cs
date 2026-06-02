@@ -715,6 +715,23 @@ namespace RP.Math
 
         #endregion
 
+        #region Conversion operators
+
+        // Read the rotation out of the matrix into the other orientation types. Explicit because it is a
+        // representation change AND it asserts the 3x3 block is a pure rotation (scale/skew is ignored,
+        // exactly as ToQuaternion documents). Each routes through ToQuaternion, the single extraction.
+
+        /// <summary>The rotation as a unit <see cref="Quaternion"/> (see <see cref="ToQuaternion"/>).</summary>
+        public static explicit operator Quaternion(Matrix m) { return m.ToQuaternion(); }
+
+        /// <summary>The rotation as an <see cref="AxisAngle"/> (assumes a pure-rotation 3x3 block).</summary>
+        public static explicit operator AxisAngle(Matrix m) { return AxisAngle.FromQuaternion(m.ToQuaternion()); }
+
+        /// <summary>The rotation as an Euler <see cref="Rotation"/> (assumes a pure-rotation 3x3 block).</summary>
+        public static explicit operator Rotation(Matrix m) { return Rotation.FromQuaternion(m.ToQuaternion()); }
+
+        #endregion
+
         #region Functions
 
         public double Determinant

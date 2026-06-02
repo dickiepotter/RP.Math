@@ -556,6 +556,18 @@ namespace RP.Math
             return (q.X, q.Y, q.Z, q.W);
         }
 
+        // Re-encodings into the other orientation types. Explicit (a representation change, not the same
+        // value) and lossless; each is a thin alias over an existing conversion method.
+
+        /// <summary>The equivalent <see cref="AxisAngle"/> (see <see cref="AxisAngle.FromQuaternion"/>).</summary>
+        public static explicit operator AxisAngle(Quaternion q) { return AxisAngle.FromQuaternion(q); }
+
+        /// <summary>The equivalent Euler <see cref="Rotation"/> (see <see cref="Rotation.FromQuaternion"/>).</summary>
+        public static explicit operator Rotation(Quaternion q) { return Rotation.FromQuaternion(q); }
+
+        /// <summary>The equivalent 4x4 rotation <see cref="Matrix"/> (see <see cref="ToMatrix"/>).</summary>
+        public static explicit operator Matrix(Quaternion q) { return q.ToMatrix(); }
+
         #endregion
 
         #region ToString
