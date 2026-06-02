@@ -1,9 +1,12 @@
-# RP.Math — the mathematics of computer science, explained
+# RP.Math — the mathematics behind computer graphics, explained
 
 > A double-precision 3D maths library for C#, written to be **read and understood** before it is
-> used. Every type is a small, immutable value object built on Cartesian coordinates and Euclidean
-> geometry, and every operation is explained with the maths behind it. The code favours clarity over
-> raw speed so the *why* stays easy to follow.
+> used. It is a **tutorial in code**: a guided tour of the vectors, angles, rotations and geometry that
+> underpin computer graphics, aimed at undergraduates (and anyone) meeting this material for the first
+> time. It assumes nothing beyond **high-school maths** — basic trigonometry and algebra — and explains
+> every operation with the maths behind it. Every type is a small, immutable value object built on
+> Cartesian coordinates and Euclidean geometry, and the code favours clarity over raw speed so the
+> *why* stays easy to follow.
 
 *This library grew out of [A Vector Type for C#](https://www.codeproject.com/Articles/17425/A-Vector-Type-for-C),
 originally published by Richard Potter on CodeProject under the
@@ -28,7 +31,9 @@ more.*
 - [`Pose`](#pose)
 - [`Matrix`](#matrix)
 - [`OrthogonalAxes` — coordinate conventions](#orthogonalaxes)
+- [Curves: `Bezier`, `Hermite`, `CatmullRom`](#curves-bezier-hermite-catmullrom)
 - [Shapes: conceptual and placed](#shapes-conceptual-and-placed)
+- [Bounding volumes: `Box` and `BoundingSphere`](#bounding-volumes-box-and-boundingsphere)
 - [Supporting numeric helpers](#supporting-numeric-helpers)
 - [Points of interest](#points-of-interest)
 - [Future considerations](#future-considerations)
@@ -38,17 +43,19 @@ more.*
 
 ## What this project is for
 
-For years I have seen people struggle with the mathematics that underpins computer science —
+For years I have seen people struggle with the mathematics that underpins computer graphics —
 vectors, angles, rotations, the geometry of lines and planes. This library is, first and foremost, a
-**learning resource**. The maths is the point; the code is the explanation. The resulting types are
-not designed to be the fastest possible (matrix mathematics and SIMD are more efficient but much
-harder to follow) — they are designed to be **as simple and understandable as possible**.
+**learning resource**, written for a reader with a high-school maths background and no more: an
+undergraduate first course, a self-teaching programmer, anyone who wants the *why* and not just an API.
+The maths is the point; the code is the explanation. The resulting types are not designed to be the
+fastest possible (matrix mathematics and SIMD are more efficient but much harder to follow) — they are
+designed to be **as simple and understandable as possible**.
 
 A few principles run through everything:
 
-- **Maths first, not graphics.** The types model mathematical ideas — magnitude, projection, central
-  angle, signed distance, gimbal lock — rather than rendering primitives. Graphics happens to overlap
-  with a lot of this maths, but a graphics/game engine is explicitly *not* what this is.
+- **Maths first, not rendering.** This teaches the maths *behind* computer graphics — magnitude,
+  projection, central angle, signed distance, gimbal lock — not how to draw pixels. The same maths
+  drives games, CAD, robotics and simulation; a graphics/game engine is explicitly *not* what this is.
 - **No unexplained jargon.** Wherever a term, symbol or acronym appears, it is introduced in plain
   language first. You will need only a basic grasp of trigonometry and algebra; the formal names
   (Cartesian, Euclidean, and so on) are just the school-level maths dressed up.
@@ -110,6 +117,46 @@ not exploding) result.
 
 ## The types at a glance
 
+Everything is built on `Vector`. The families below — the line family, the orientation types, planes,
+angles, poses and shapes — each lean on it, and several convert freely into one another:
+
+```mermaid
+graph TD
+    V["Vector<br/>(x, y, z) — point or direction"]
+
+    subgraph lines["Line family — differ only in where they may stop"]
+        direction LR
+        L["Line<br/>no ends"] --- R["Ray<br/>one end"] --- S["LineSegment<br/>two ends"] --- C["Chord<br/>ends on a circle"]
+    end
+
+    subgraph orient["Orientation — same turn, different encodings"]
+        direction LR
+        Q["Quaternion"] --- AA["AxisAngle"] --- Rot["Rotation<br/>(Euler X/Y/Z)"] --- M["Matrix"]
+        Att["Attitude<br/>(yaw/pitch/roll)"]
+    end
+
+    subgraph shapes["Shapes"]
+        Concept["Conceptual shape<br/>size only"] -->|"+ Pose"| Placed["Placed shape<br/>in the world"]
+    end
+
+    P["Plane"]
+    Ang["Angle"]
+    Pose["Pose<br/>position + orientation"]
+    OA["OrthogonalAxes<br/>coordinate convention"]
+
+    V --> lines
+    V --> P
+    V --> orient
+    V --> shapes
+    V --> Pose
+    Q --- Pose
+    OA -.->|"gives meaning to"| Att
+    Ang -.-> orient
+
+    classDef found fill:#ffe9a8,stroke:#b8860b,color:#222;
+    class V found;
+```
+
 | Type | What it models | How it differs from its neighbours |
 |------|----------------|-------------------------------------|
 | **`Vector`** | A point or direction in 3D space (x, y, z). | The foundation; almost everything else is built from it. |
@@ -125,6 +172,8 @@ not exploding) result.
 | **`Pose`** | A position **and** an orientation together. | A rigid placement ("where" + "which way") in friendly form. |
 | **`Matrix`** | A 4×4 transformation matrix. | The general linear-algebra workhorse for transforms. |
 | **`OrthogonalAxes`** | A coordinate-system convention (which way is up, right, far, and its handedness). | A constant label chosen per project — not a position or an orientation. |
+| **`Bezier`**, **`Hermite`**, **`CatmullRom`** | Smooth curves through space. | Extend the straight-line/arc interpolation of `Vector` to genuine curves. |
+| **`Box`**, **`BoundingSphere`** | Axis-aligned bounding volumes. | Cheap *quick-rejection* hulls — "could these possibly touch?" — distinct from the exact shapes. |
 | **`Circle`**, **`Triangle`**, **`Rectangle`**, **`Ellipse`**, **`Annulus`**, **`Sector`** | *Conceptual* flat shapes — size and proportion only, no position. | Pure intrinsic geometry: area, perimeter, angles; comparable by size. |
 | **`Sphere`**, **`Cuboid`**, **`Cylinder`**, **`Cone`**, **`Capsule`**, **`Ellipsoid`**, **`Torus`** | *Conceptual* solids — size and proportion only, no position. | Pure intrinsic geometry: volume, surface area; comparable by size. |
 | **`Placed…`** (one per conceptual shape) | A conceptual shape **placed** in space by a `Pose`. | Add world-space maths: containment, closest point, line/ray hits. |
@@ -196,14 +245,33 @@ discards information (so you write the cast and take responsibility for it).
 the existing `To*`/`From*` method, routing through the quaternion where needed). Casting **from**
 `Matrix` additionally asserts its 3×3 block is a pure rotation (scale/skew is ignored).
 
-```
-            (Quaternion)
-           ╱     │      ╲
-   (AxisAngle)───┼───(Matrix)      every edge is a two-way explicit cast
-           ╲     │      ╱          e.g.  var aa = (AxisAngle)q;  var m = (Matrix)aa;
-            (Rotation)
+```mermaid
+graph TD
+    Q["Quaternion"]
+    AA["AxisAngle"]
+    Rot["Rotation<br/>(Euler X/Y/Z)"]
+    M["Matrix"]
+    Att["Attitude<br/>(yaw / pitch / roll)"]
+    OA["OrthogonalAxes"]
+
+    Q <--> AA
+    Q <--> Rot
+    Q <--> M
+    AA <--> Rot
+    AA <--> M
+    Rot <--> M
+
+    Att -->|"ToQuaternion(axes)"| Q
+    Q -->|"FromQuaternion(q, axes)"| Att
+    OA -.->|"required convention"| Att
+
+    classDef mesh fill:#dfe9ff,stroke:#4472c4,color:#222;
+    classDef conv fill:#ffe0f0,stroke:#c0508f,color:#222;
+    class Q,AA,Rot,M mesh;
+    class Att,OA conv;
 ```
 
+Every solid edge above is a two-way **explicit cast** (e.g. `var aa = (AxisAngle)q;  var m = (Matrix)aa;`).
 `Attitude` (yaw/pitch/roll) is **not** in the mesh: it only has meaning relative to an `OrthogonalAxes`,
 so it converts through `Attitude.ToQuaternion(axes)` / `Attitude.FromQuaternion(q, axes)` — methods, not
 casts. `Pose` is also method/constructor-only for its rotation, because it carries a position too; its
@@ -863,6 +931,25 @@ Why it is the dependable representation:
 It also offers `Conjugate`/`Inverse`, `DotProduct`, `AngleBetween`/`AngleTo`, `FromYawPitchRoll(…, OrthogonalAxes)`,
 `ToMatrix`, the identity/zero/NaN constants, and predicates `IsUnit`, `IsIdentity`, `IsZero`, `IsNaN`.
 
+**Building an orientation that points somewhere.** Two factories construct a rotation from directions
+rather than from angles:
+
+- **`FromToRotation(from, to)`** — the shortest-arc turn that swings the direction `from` onto the
+  direction `to`. The axis is their cross product, the angle comes from their dot product; the aligned and
+  exactly-opposite cases are handled. (This is the primitive `PlacedTriangle.FromVertices` now leans on.)
+- **`LookRotation(forward, up, axes)`** — the orientation that "looks" along `forward` with `up` as the
+  upward reference. Like `FromYawPitchRoll`, it takes an [`OrthogonalAxes`](#orthogonalaxes) so it never
+  assumes a fixed frame: it maps the convention's `Forward` onto `forward` and its `Up` as near to `up` as
+  the look direction allows (a single-argument overload uses the convention's own `Up`). The third axis
+  then follows with the convention's handedness, so there is no handedness branching to get wrong.
+
+```csharp
+Quaternion turn = Quaternion.FromToRotation(Vector.XAxis, Vector.YAxis);   // a quarter turn about +Z
+Quaternion look = Quaternion.LookRotation(target - eye, OrthogonalAxes.OpenGL);
+```
+
+(Both are static factories on `Quaternion`; for the Euler form just cast the result, `(Rotation)look`.)
+
 ---
 
 ## `Pose`
@@ -919,6 +1006,20 @@ var rx = Matrix.RotationMatrixAboutXAxis(angle);   // …AboutYAxis, …AboutZAx
 Vector moved = t * v;                               // apply the transform to a vector
 ```
 
+**Determinant and inverse.** The `Determinant` measures how the transform scales volume (and its sign
+records whether the transform flips orientation); it is zero exactly when the transform *collapses* space
+onto a plane, line or point. `Inverse()` returns the transform that **undoes** this one — so
+`m * m.Inverse()` is the `Identity` — computed the textbook way, as the adjugate (the transpose of the
+matrix of cofactors) divided by the determinant. That division is why a collapsing transform has no
+inverse: information flattened away cannot be recovered. `Inverse()` throws on a singular matrix;
+`IsInvertible` lets you check first.
+
+```csharp
+Matrix world  = Matrix.TranslationMatrix(pos) * Matrix.ScalingMatrix(2, 2, 2);
+Vector local  = world.Inverse() * worldPoint;     // map a world point back into local space
+bool ok       = world.IsInvertible;                // false only when the determinant is zero
+```
+
 ---
 
 ## `OrthogonalAxes`
@@ -927,6 +1028,31 @@ An `OrthogonalAxes` is a **coordinate-system convention** — a constant that re
 ecosystem, *which way is which*: which Cartesian axis means right, which means up, which means
 forward, and which direction along each is positive. It answers the question "when this project says
 `y`, does it mean *up* or *into the screen*?"
+
+This is what lets the library **stop assuming a fixed world frame**. Yaw, pitch and roll have no
+meaning until you say which way is up, right and forward — so instead of hard-wiring X/Y/Z, the
+convention-aware rotations take an `OrthogonalAxes` and turn about *its* directions. Swap the
+convention and the rotations follow it:
+
+```mermaid
+graph LR
+    OA["OrthogonalAxes<br/>chosen once per project<br/>(OpenGL, DirectX, Blender, Unreal, ...)"]
+
+    OA -->|"Right"| RGT["+X? -X?"]
+    OA -->|"Up"| UP["+Y? -Y?"]
+    OA -->|"Forward (far)"| FWD["+Z? -Z?"]
+
+    RGT --> pitch["Pitch — about Right"]
+    UP --> yaw["Yaw — about Up"]
+    FWD --> roll["Roll — about Forward"]
+
+    yaw --> turn["rotated Vector / Quaternion"]
+    pitch --> turn
+    roll --> turn
+
+    note["no hard-wired world axis:<br/>swap the convention and<br/>the rotations follow it"]
+    note -.-> OA
+```
 
 Different worlds disagree, and that is the whole reason the type exists. OpenGL is y-up and
 right-handed; Direct3D is y-up and left-handed; Blender and most CAD/engineering maths are z-up;
@@ -1030,6 +1156,68 @@ and map the result back — instead of branching on the convention in every meth
 
 ---
 
+## Curves: `Bezier`, `Hermite`, `CatmullRom`
+
+[`Vector`](#vector--the-foundation) can already walk between two points in a straight line
+(`Interpolate`) or along an arc (`Slerp`). The curve types are the next step: smooth paths that bend
+through space, the staple of camera moves, motion paths and easing. All three are immutable and built on
+`Vector`, and all are parameterised by a `t` running 0→1 from start to end, with a `PointAt(t)` and a
+`Tangent(t)` (the velocity — direction-and-speed — at that point).
+
+```mermaid
+graph LR
+    V["Vector<br/>lerp · slerp"] --> B["Bezier<br/>pulled by control points"]
+    V --> H["Hermite<br/>endpoints + tangents"]
+    H -->|"tangents chosen<br/>automatically"| CR["CatmullRom<br/>passes through waypoints"]
+```
+
+### `Bezier` — pulled toward control points
+
+A Bézier curve is defined by an ordered list of **control points**. It starts at the first and ends at
+the last; the interior points pull the curve toward them without being touched. Two control points give
+a straight line, three a quadratic, four a cubic (the everyday case), and higher degrees are allowed.
+
+It is evaluated by **de Casteljau's algorithm**: to find the point at `t`, repeatedly replace each
+adjacent pair of points with the point a fraction `t` along the segment between them; each pass yields
+one fewer point, and the last point left is the answer. It is just repeated straight-line interpolation
+all the way down — which is exactly why it reads well as a teaching example. The `Tangent` reuses the
+same evaluation on the curve's *derivative*, itself a lower-degree Bézier.
+
+```csharp
+var curve = Bezier.Cubic(p0, p1, p2, p3);
+Vector here = curve.PointAt(0.25);
+Vector vel  = curve.Tangent(0.25);     // heading + speed at that point
+double len  = curve.Length(64);         // arc length, approximated by sampling
+```
+
+### `Hermite` — endpoints with tangents
+
+A cubic `Hermite` segment is fixed not by off-curve handles but by the two endpoints **and the tangent
+(velocity) at each** — exactly the information needed to join segments together smoothly. The point is a
+blend of the two endpoints and two tangents weighted by the four cubic *Hermite basis functions*; you can
+check by hand that it passes through the endpoints and leaves/arrives along the given tangents.
+
+```csharp
+var seg = new Hermite(startPoint, startTangent, endPoint, endTangent);
+Vector mid = seg.PointAt(0.5);
+```
+
+### `CatmullRom` — through every waypoint
+
+A Catmull–Rom spline passes **through** every one of a sequence of waypoints (unlike a Bézier, whose
+interior points it misses) — so it is the natural choice for routing something through positions you have
+placed by hand. The trick is that it is just a chain of `Hermite` segments with the tangents filled in
+for you: at each waypoint the curve heads along the line through its two neighbours, at half their
+separation. That single rule makes the joins smooth without the caller supplying any tangents. The whole
+spline takes one `t` from 0 (first waypoint) to 1 (last); `Segment(i)` exposes the underlying `Hermite`.
+
+```csharp
+var path = new CatmullRom(a, b, c, d);
+Vector p = path.PointAt(0.5);          // halfway along the whole spline, on the curve through the points
+```
+
+---
+
 ## Shapes: conceptual and placed
 
 The shape types are built around one deliberate split: **what a shape *is*** is kept separate from
@@ -1043,6 +1231,31 @@ The shape types are built around one deliberate split: **what a shape *is*** is 
   conceptual shape **together with a [`Pose`](#pose)** that puts it somewhere in the world. Only the
   placed form answers world-space questions: does it contain this point, what is the closest point on
   it, where does this line or ray strike it.
+
+```mermaid
+graph LR
+    subgraph concept["Conceptual shape — size & proportion only"]
+        direction TB
+        C1["Circle, Rectangle, Ellipse,<br/>Annulus, Sector, Triangle"]
+        C2["Sphere, Cuboid, Cylinder, Cone,<br/>Capsule, Ellipsoid, Torus"]
+    end
+
+    subgraph placed["Placed shape — in the world"]
+        direction TB
+        P1["PlacedCircle, PlacedRectangle, ..."]
+        P2["PlacedSphere, PlacedCuboid, ..."]
+    end
+
+    pose["Pose<br/>(where + which way)"]
+
+    concept -->|"+ Pose"| placed
+    pose -.-> placed
+
+    q1["area / volume<br/>compare by size"] -.-> concept
+    q2["Contains? closest point?<br/>line / ray hit?"] -.-> placed
+
+    vtx["PlacedPolygon · PlacedTetrahedron<br/>defined by corners — always placed"] --> placed
+```
 
 ### Why keep them apart
 
@@ -1134,9 +1347,10 @@ existing `Sphere`, whose `Contains` has always meant "on or within".
 | `PlacedPolygon` | ordered coplanar corners | any simple polygon (convex or concave); robust area/normal/centroid, crossing-number containment |
 | `PlacedTetrahedron` | four corners | the simplest solid; barycentric containment, per-face intersection |
 
-> **"Cuboid", not "Box".** The solid box is named `Cuboid` so the name `Box` stays free for a future
+> **"Cuboid", not "Box".** The solid box is named `Cuboid` so the name `Box` stays free for the
 > axis-aligned *bounding* box (a different idea — the box that just contains something, used for quick
-> rejection — and the reason the earlier `BoundingBox` was removed rather than renamed).
+> rejection — and the reason the earlier `BoundingBox` was removed rather than renamed). That
+> [`Box`](#bounding-volumes-box-and-boundingsphere) now exists, alongside a `BoundingSphere`.
 
 ### Vertex-defined shapes
 
@@ -1174,11 +1388,12 @@ t.A; t.B; t.C;                                   // round-trips back to the orig
 ```
 
 `FromVertices` has to turn three points into a `Pose`, which means recovering an orientation from a
-coordinate frame. The library has no matrix-to-quaternion conversion, so the rotation is built by
-**composing the library's own `Quaternion.FromAxisAngle` turns** — first swinging local +Z onto the face
-normal, then spinning about that normal to line local +X up with the A→B edge. Building it from the
-existing primitives keeps it consistent with the quaternion conventions used everywhere else (and the
-round-trip is covered by tests).
+coordinate frame. Rather than assemble a rotation matrix and read it back (`Matrix.ToQuaternion` could
+do that), the rotation is built directly by **composing the library's own quaternion turns** — first
+`Quaternion.FromToRotation` to swing local +Z onto the face normal, then a `Quaternion.FromAxisAngle`
+spin about that normal to line local +X up with the A→B edge. Building it from the orientation
+primitives keeps it consistent with the quaternion conventions used everywhere else, and avoids assuming
+the recovered frame is perfectly orthonormal (and the round-trip is covered by tests).
 
 ### `Circle` and `Sphere`
 
@@ -1206,6 +1421,59 @@ centre)` and `PlacedSphere.At(sphere, centre)` are the everyday factories.
   plus `PlacedCircle` / `PlacedSphere`, consistent with every other shape.
 - **Intersections are exact, including the torus.** Rather than approximate the torus's line/ray hits, a
   real quartic solver (`PolynomialRoots`) was added so its crossings are exact like the other solids'.
+
+---
+
+## Bounding volumes: `Box` and `BoundingSphere`
+
+The exact shapes above answer questions precisely — and sometimes expensively. A **bounding volume** is
+the opposite trade: a crude hull that is cheap to test, used for **quick rejection** — the fast "could
+these two things *possibly* touch?" you run before any exact geometry. Both types are immutable, built on
+`Vector`, and treat themselves as filled regions (`Contains` means "on or within").
+
+### `Box` — the axis-aligned bounding box (AABB)
+
+A `Box` is described by two opposite corners, a `Min` and a `Max`, with faces parallel to the coordinate
+planes. Because the faces never tilt, containment and overlap are just per-axis number comparisons — which
+is the whole point. (This is the `Box` the [shapes note](#the-shapes) reserved the name for; it is a
+different idea from the oriented solid [`Cuboid`](#shapes-conceptual-and-placed), which can sit at any
+angle.)
+
+```csharp
+Box b   = Box.FromPoints(p0, p1, p2);          // smallest AABB enclosing some points
+Box ce  = Box.FromCenterExtents(centre, half); // …or from a centre and half-size
+bool in = b.Contains(point);
+bool hit = b.Intersects(other);                 // touching faces count
+Vector near = b.ClosestPoint(point);            // clamps the point into the box
+Box grown = b.Merge(other).Expand(0.1);         // union, then a safety margin
+```
+
+Line and ray hits use the **slab method**: an AABB is the overlap of three pairs of parallel planes
+("slabs"), one per axis; intersect the per-axis parameter spans and a non-empty result is the hit. It is
+spelled out in the source.
+
+```csharp
+if (b.TryIntersect(ray, out Vector entry)) { /* … */ }
+if (b.TryIntersect(line, out Vector nearP, out Vector farP)) { /* … */ }
+```
+
+### `BoundingSphere` — a centre and a radius
+
+A `BoundingSphere` is the rotation-independent counterpart: a centre and radius, so it needs no re-fitting
+when the thing it wraps turns, and the overlap test between two spheres is a single distance comparison. It
+is distinct from [`PlacedSphere`](#circle-and-sphere) — that is a geometric sphere with full surface/volume
+maths and exact line/ray hits; this is a lightweight hull focused on containment and overlap.
+
+`FromPoints` fits one with **Ritter's algorithm**: span the two points found farthest apart in a quick
+scan, then sweep once more, growing the sphere just enough whenever a stray point falls outside. The result
+is small (though not provably the smallest) and cheap.
+
+```csharp
+BoundingSphere s = BoundingSphere.FromPoints(points);
+bool hitsBox  = s.Intersects(box);
+bool hitsBall = s.Intersects(other);
+BoundingSphere grown = s.Merge(extraPoint);
+```
 
 ---
 
@@ -1291,18 +1559,21 @@ independently of any interface:
   contract.
 - **`Contains` coverage is uneven:** it exists on `Line` but not on `Ray` or `LineSegment`, while every
   shape carries both a `Contains(point)` and a `Contains(point, tolerance)` overload.
-- **`DistanceTo` is missing on the shapes:** the line family and `Plane` have it; the placed shapes do
-  not, although it is a one-liner over their existing closest-point
-  (`(point − ClosestPoint(point)).Magnitude`).
+- **`DistanceTo` ✓ resolved.** It was missing on the placed shapes (the line family and `Plane` already
+  had it). Every placed shape now carries `DistanceTo(point)` — the one-liner
+  `(point − ClosestPoint(point)).Magnitude`, which is zero on or within the shape. `PlacedSphere`, whose
+  closest-point method returns a *surface* point, instead defines it as `Max(0, SignedDistanceTo(point))`
+  so "inside ⇒ 0" holds uniformly.
 - **An open question of *meaning*:** `Contains` on a filled shape means "on or within"; on a
   zero-thickness line / ray / segment it can only mean "lies on". The signature and intent match, but
   whether that is genuinely *the same concept* — and therefore safe to place on one shared interface —
   is exactly the kind of false-implication risk this library tries hard to avoid, and should be settled
   deliberately rather than by accident.
-- **Intersection is a separate, related capability:** shapes accept a `Line` / `Ray` and report hits,
-  but their out-parameters already disagree (`out Vector point` for some, `out Vector near, out Vector
-  far` for others). This is where the two families *relate* rather than *share*, and it carries its own
-  consistency question for a later pass.
+- **Intersection out-parameters ✓ resolved.** The `Line` overload used to disagree — `out Vector point`
+  on the flat shapes (one crossing), `out Vector near, out Vector far` on the solids (two). They are now
+  unified on `out Vector near, out Vector far` everywhere: a flat shape meets an infinite line at most
+  once, so it reports that single crossing as `near == far` — the same convention solids already use when
+  a line grazes. (The `Ray` overload was already uniform, returning the first hit as `out Vector point`.)
 
 ### Generic positioning, keyed on symmetry
 
@@ -1441,4 +1712,7 @@ an `OrthogonalAxes` in both directions (`Attitude.ToQuaternion(axes)` / `FromQua
 assumes a fixed up/right/forward. The `Shape`
 types follow a settled conceptual/placed split — `Circle`, `Sphere`, `Triangle`, `Rectangle`, `Ellipse`,
 `Annulus`, `Sector`, `Cuboid`, `Cylinder`, `Cone`, `Capsule`, `Ellipsoid` and `Torus`, each with a
-`Placed…` partner, plus the always-placed `PlacedPolygon` and `PlacedTetrahedron`.
+`Placed…` partner, plus the always-placed `PlacedPolygon` and `PlacedTetrahedron`. More recently the
+`Matrix` gained a true `Inverse`, `Quaternion` gained direction-based construction (`FromToRotation`,
+`LookRotation`), and two new families joined: the curves (`Bezier`, `Hermite`, `CatmullRom`) and the
+axis-aligned bounding volumes (`Box`, `BoundingSphere`).

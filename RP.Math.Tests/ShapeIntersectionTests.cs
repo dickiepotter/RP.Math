@@ -68,8 +68,10 @@ namespace RP.Math.Tests
         {
             var c = PlacedCircle.InXYPlane(new Circle(5), new Vector(0, 0, 0));
             var line = new Line(new Vector(1, 1, 5), new Vector(0, 0, -1)); // straight down through the disc
-            c.TryIntersect(line, out Vector p).Should().BeTrue();
-            p.Equals(new Vector(1, 1, 0), LooseTol).Should().BeTrue();
+            c.TryIntersect(line, out Vector near, out Vector far).Should().BeTrue();
+            near.Equals(new Vector(1, 1, 0), LooseTol).Should().BeTrue();
+            far.Equals(near, LooseTol).Should().BeTrue(); // a flat disc has a single crossing
+
         }
 
         [TestMethod, TestCategory("CircleIntersect")]
@@ -77,7 +79,7 @@ namespace RP.Math.Tests
         {
             var c = PlacedCircle.InXYPlane(new Circle(5), new Vector(0, 0, 0));
             var line = new Line(new Vector(20, 0, 5), new Vector(0, 0, -1)); // hits the plane at x = 20, outside r = 5
-            c.TryIntersect(line, out _).Should().BeFalse();
+            c.TryIntersect(line, out _, out _).Should().BeFalse();
         }
 
         [TestMethod, TestCategory("CircleIntersect")]

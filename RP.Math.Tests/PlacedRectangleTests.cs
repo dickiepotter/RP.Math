@@ -57,8 +57,10 @@ namespace RP.Math.Tests
         {
             var r = Flat();
             var line = new Line(new Vector(1, 1, 5), new Vector(0, 0, -1));
-            r.TryIntersect(line, out Vector p).Should().BeTrue();
-            p.Equals(new Vector(1, 1, 0), LooseTol).Should().BeTrue();
+            r.TryIntersect(line, out Vector near, out Vector far).Should().BeTrue();
+            near.Equals(new Vector(1, 1, 0), LooseTol).Should().BeTrue();
+            far.Equals(near, LooseTol).Should().BeTrue(); // a flat rectangle has a single crossing
+
         }
 
         [TestMethod, TestCategory("Intersect")]
@@ -66,7 +68,7 @@ namespace RP.Math.Tests
         {
             var r = Flat();
             var line = new Line(new Vector(3, 0, 5), new Vector(0, 0, -1)); // hits plane at x = 3 > half-width 2
-            r.TryIntersect(line, out _).Should().BeFalse();
+            r.TryIntersect(line, out _, out _).Should().BeFalse();
         }
 
         [TestMethod, TestCategory("Intersect")]

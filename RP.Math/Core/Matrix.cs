@@ -256,6 +256,7 @@ namespace RP.Math
         private const string MULTI_DIM_COMPONENT_COUNT  = "Array must have dimensions of [3,3], [3,4], [4,3] or [4,4].";
         private const string THREE_COMPONENTS           = "Transformation operation array arguments must have exactly three components (_x,_y,_z)";
         private const string NOT_HOMOGENEOUS            = "The product of a Matrix and a Vector does not resolve to a homogeneous vector e.g.(_x,_y,_z,1).";
+        private const string SINGULAR                   = "Matrix is singular (its determinant is zero) and has no inverse.";
 
         #endregion
 
@@ -773,7 +774,7 @@ namespace RP.Math
             (
                 new Matrix
                 (
-                    new double[,] 
+                    new double[,]
                     {
                         {_vals[0,0], _vals[1,0], _vals[2,0], _vals[3,0]},
                         {_vals[0,1], _vals[1,1], _vals[2,1], _vals[3,1]},
@@ -782,6 +783,79 @@ namespace RP.Math
                     }
                 )
             );
+        }
+
+        /// <summary>
+        /// The multiplicative inverse — the transform that undoes this one, so that <c>m * m.Inverse()</c>
+        /// (and <c>m.Inverse() * m</c>) is the <see cref="Identity"/>, within rounding.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Maths: the inverse is the <em>adjugate</em> divided by the <see cref="Determinant"/>. The
+        /// adjugate is the transpose of the matrix of <em>cofactors</em>; a cofactor <c>C(i,j)</c> is the
+        /// determinant of the 3x3 matrix left when row <c>i</c> and column <c>j</c> are struck out,
+        /// multiplied by the chequerboard sign <c>(−1)^(i+j)</c>. Transposing turns cofactor <c>(j,i)</c>
+        /// into entry <c>(i,j)</c> of the result, which is why the loop below reads <c>Minor(col, row)</c>.
+        /// </para>
+        /// <para>
+        /// Dividing by the determinant is exactly why a <em>singular</em> matrix — one whose determinant is
+        /// zero, because it collapses space onto a plane, line or point — has no inverse: there is no way to
+        /// undo information that has been flattened away. This route (cofactors) is chosen over row-reduction
+        /// because it states the maths directly; it is not the fastest method, in keeping with the library's
+        /// clarity-first aim.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="InvalidOperationException">Thrown if the matrix is singular (zero determinant).</exception>
+        public Matrix Inverse()
+        {
+            double det = Determinant;
+            if (det == 0) throw new InvalidOperationException(SINGULAR);
+
+            var result = new double[4, 4];
+            for (int row = 0; row < 4; row++)
+            {
+                for (int col = 0; col < 4; col++)
+                {
+                    // adjugate[row,col] = cofactor(col,row) = (−1)^(col+row) · Minor(col,row).
+                    double sign = (row + col) % 2 == 0 ? 1.0 : -1.0;
+                    result[row, col] = sign * MinorDeterminant(col, row) / det;
+                }
+            }
+
+            return new Matrix(result);
+        }
+
+        /// <summary>The multiplicative inverse of <paramref name="m1"/> (see <see cref="Inverse()"/>).</summary>
+        public static Matrix Inverse(Matrix m1) { return m1.Inverse(); }
+
+        /// <summary>
+        /// The determinant of the 3x3 submatrix left when <paramref name="skipRow"/> and
+        /// <paramref name="skipColumn"/> are removed (the "minor" used to build each cofactor).
+        /// </summary>
+        private double MinorDeterminant(int skipRow, int skipColumn)
+        {
+            // Copy the nine surviving entries into a 3x3 block.
+            var m = new double[3, 3];
+            int r = 0;
+            for (int row = 0; row < 4; row++)
+            {
+                if (row == skipRow) continue;
+                int c = 0;
+                for (int col = 0; col < 4; col++)
+                {
+                    if (col == skipColumn) continue;
+                    m[r, c] = _vals[row, col];
+                    c++;
+                }
+
+                r++;
+            }
+
+            // The 3x3 determinant (expansion along the top row).
+            return
+                m[0, 0] * ((m[1, 1] * m[2, 2]) - (m[1, 2] * m[2, 1]))
+              - m[0, 1] * ((m[1, 0] * m[2, 2]) - (m[1, 2] * m[2, 0]))
+              + m[0, 2] * ((m[1, 0] * m[2, 1]) - (m[1, 1] * m[2, 0]));
         }
 
         public static Matrix TranslationMatrix(Vector v1) { return TranslationMatrix(v1.X, v1.Y, v1.Z); }
@@ -892,6 +966,9 @@ namespace RP.Math
 
         public bool IsIdentity  { get { return Equals(Identity); } }
         public bool IsZero      { get { return Equals(Zero); } }
+
+        /// <summary>Whether the matrix has an inverse — true exactly when its <see cref="Determinant"/> is non-zero.</summary>
+        public bool IsInvertible { get { return Determinant != 0; } }
 
         public bool IsTranslationMatrix
         {

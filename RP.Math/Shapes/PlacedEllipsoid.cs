@@ -145,6 +145,12 @@ namespace RP.Math
                 (c2 * qz) / (tt + c2)));
         }
 
+        /// <summary>The distance from <paramref name="point"/> to the shape (zero when it lies on or within it).</summary>
+        public double DistanceTo(Vector point)
+        {
+            return (point - this.ClosestPoint(point)).Magnitude;
+        }
+
         #endregion
 
         #region Intersection with a line or ray

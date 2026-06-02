@@ -181,23 +181,31 @@ namespace RP.Math
             return this.pose.Apply(local);
         }
 
+        /// <summary>The distance from <paramref name="point"/> to the shape (zero when it lies on or within it).</summary>
+        public double DistanceTo(Vector point)
+        {
+            return (point - this.ClosestPoint(point)).Magnitude;
+        }
+
         #endregion
 
         #region Intersection with a line or ray
 
         /// <summary>
-        /// Intersect the filled triangle with an infinite <see cref="Line"/>. Returns true and the meeting
-        /// point when the line passes through the triangle; false when it crosses the triangle's plane
-        /// outside the edges or runs parallel to the plane.
+        /// Intersect the filled triangle with an infinite <see cref="Line"/>. A line meets the flat triangle
+        /// at most once, so on a hit <paramref name="near"/> and <paramref name="far"/> are the same crossing
+        /// point; false when it crosses the triangle's plane outside the edges or runs parallel to it.
         /// </summary>
-        public bool TryIntersect(Line line, out Vector point)
+        public bool TryIntersect(Line line, out Vector near, out Vector far)
         {
-            return this.TryIntersectLocal(line.Point, line.Direction, requireForward: false, out point);
+            bool hit = this.TryIntersectLocal(line.Point, line.Direction, requireForward: false, out Vector point);
+            near = far = point;
+            return hit;
         }
 
         /// <summary>
         /// Intersect the filled triangle with a <see cref="Ray"/>. As
-        /// <see cref="TryIntersect(Line, out Vector)"/>, but the hit must lie at or ahead of the ray's origin.
+        /// <see cref="TryIntersect(Line, out Vector, out Vector)"/>, but the hit must lie at or ahead of the ray's origin.
         /// </summary>
         public bool TryIntersect(Ray ray, out Vector point)
         {
@@ -447,30 +455,13 @@ namespace RP.Math
             return a + (ab * vv) + (ac * ww);
         }
 
-        /// <summary>A quaternion rotating the unit vector <paramref name="from"/> onto the unit vector <paramref name="to"/>.</summary>
+        /// <summary>
+        /// A quaternion rotating the unit vector <paramref name="from"/> onto the unit vector
+        /// <paramref name="to"/> — the shortest-arc turn. Delegates to <see cref="Quaternion.FromToRotation"/>.
+        /// </summary>
         private static Quaternion RotationBetween(Vector from, Vector to)
         {
-            double dot = from.DotProduct(to);
-            dot = dot > 1 ? 1 : (dot < -1 ? -1 : dot);
-
-            if (dot >= 1.0 - 1e-12)
-            {
-                return Quaternion.Identity; // already aligned
-            }
-
-            if (dot <= -1.0 + 1e-12)
-            {
-                Vector perp = from.CrossProduct(new Vector(1, 0, 0));
-                if (perp.IsZero())
-                {
-                    perp = from.CrossProduct(new Vector(0, 1, 0));
-                }
-
-                return Quaternion.FromAxisAngle(perp.NormalizeOrDefault(), new Angle(Math.PI)); // opposite: half turn
-            }
-
-            Vector axis = from.CrossProduct(to).NormalizeOrDefault();
-            return Quaternion.FromAxisAngle(axis, new Angle(Math.Acos(dot)));
+            return Quaternion.FromToRotation(from, to);
         }
 
         #endregion

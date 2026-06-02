@@ -122,14 +122,25 @@ namespace RP.Math
             return this.pose.Apply(new Vector(local.X * scale, local.Y * scale, 0));
         }
 
+        /// <summary>The distance from <paramref name="point"/> to the shape (zero when it lies on or within it).</summary>
+        public double DistanceTo(Vector point)
+        {
+            return (point - this.ClosestPoint(point)).Magnitude;
+        }
+
         #endregion
 
         #region Intersection with a line or ray
 
-        /// <summary>Intersect the filled ring with an infinite <see cref="Line"/>.</summary>
-        public bool TryIntersect(Line line, out Vector point)
+        /// <summary>
+        /// Intersect the filled ring with an infinite <see cref="Line"/>. A line meets the flat ring at most
+        /// once, so on a hit <paramref name="near"/> and <paramref name="far"/> are the same crossing point.
+        /// </summary>
+        public bool TryIntersect(Line line, out Vector near, out Vector far)
         {
-            return this.TryIntersectLocal(line.Point, line.Direction, requireForward: false, out point);
+            bool hit = this.TryIntersectLocal(line.Point, line.Direction, requireForward: false, out Vector point);
+            near = far = point;
+            return hit;
         }
 
         /// <summary>Intersect the filled ring with a <see cref="Ray"/> (hit must be at or ahead of the origin).</summary>

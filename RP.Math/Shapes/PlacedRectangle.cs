@@ -141,23 +141,31 @@ namespace RP.Math
             return this.pose.Apply(new Vector(x, y, 0));
         }
 
+        /// <summary>The distance from <paramref name="point"/> to the shape (zero when it lies on or within it).</summary>
+        public double DistanceTo(Vector point)
+        {
+            return (point - this.ClosestPoint(point)).Magnitude;
+        }
+
         #endregion
 
         #region Intersection with a line or ray
 
         /// <summary>
-        /// Intersect the filled rectangle with an infinite <see cref="Line"/>. Returns true and the meeting
-        /// point when the line passes through the rectangle; false when it crosses the plane outside the
-        /// edges or runs parallel to the plane.
+        /// Intersect the filled rectangle with an infinite <see cref="Line"/>. A line meets the flat
+        /// rectangle at most once, so on a hit <paramref name="near"/> and <paramref name="far"/> are the
+        /// same crossing point; false when it crosses the plane outside the edges or runs parallel to it.
         /// </summary>
-        public bool TryIntersect(Line line, out Vector point)
+        public bool TryIntersect(Line line, out Vector near, out Vector far)
         {
-            return this.TryIntersectLocal(line.Point, line.Direction, requireForward: false, out point);
+            bool hit = this.TryIntersectLocal(line.Point, line.Direction, requireForward: false, out Vector point);
+            near = far = point;
+            return hit;
         }
 
         /// <summary>
         /// Intersect the filled rectangle with a <see cref="Ray"/>. As
-        /// <see cref="TryIntersect(Line, out Vector)"/>, but the hit must lie at or ahead of the ray's origin.
+        /// <see cref="TryIntersect(Line, out Vector, out Vector)"/>, but the hit must lie at or ahead of the ray's origin.
         /// </summary>
         public bool TryIntersect(Ray ray, out Vector point)
         {

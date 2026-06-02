@@ -122,17 +122,26 @@ namespace RP.Math
             return this.pose.Apply(new Vector(local.X * scale, local.Y * scale, 0));
         }
 
+        /// <summary>The distance from <paramref name="point"/> to the shape (zero when it lies on or within it).</summary>
+        public double DistanceTo(Vector point)
+        {
+            return (point - this.ClosestPoint(point)).Magnitude;
+        }
+
         #endregion
 
         #region Intersection with a line or ray
 
         /// <summary>
-        /// Intersect the disc with an infinite <see cref="Line"/>. Returns true and the meeting point when
-        /// the line crosses the disc; false when it crosses the plane outside the radius or runs parallel.
+        /// Intersect the disc with an infinite <see cref="Line"/>. A line meets the flat disc at most once,
+        /// so on a hit <paramref name="near"/> and <paramref name="far"/> are the same crossing point; false
+        /// when the line crosses the plane outside the radius or runs parallel.
         /// </summary>
-        public bool TryIntersect(Line line, out Vector point)
+        public bool TryIntersect(Line line, out Vector near, out Vector far)
         {
-            return this.TryIntersectLocal(line.Point, line.Direction, requireForward: false, out point);
+            bool hit = this.TryIntersectLocal(line.Point, line.Direction, requireForward: false, out Vector point);
+            near = far = point;
+            return hit;
         }
 
         /// <summary>Intersect the disc with a <see cref="Ray"/> (hit must be at or ahead of the origin).</summary>

@@ -113,6 +113,15 @@ namespace RP.Math
             return this.Center.DistanceSquared(other.Center) <= sumRadii * sumRadii;
         }
 
+        /// <summary>
+        /// The distance from <paramref name="point"/> to the sphere (zero when it lies on or within it).
+        /// For the signed form (negative inside) use <see cref="SignedDistanceTo"/>.
+        /// </summary>
+        public double DistanceTo(Vector point)
+        {
+            return Math.Max(0, this.SignedDistanceTo(point));
+        }
+
         #endregion
 
         #region Intersection with a line or ray

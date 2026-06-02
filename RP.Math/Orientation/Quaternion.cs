@@ -364,6 +364,97 @@ namespace RP.Math
         }
 
         /// <summary>
+        /// The shortest-arc rotation that turns the direction <paramref name="from"/> onto the direction
+        /// <paramref name="to"/> (so that <c>FromToRotation(from, to).Rotate(from)</c> points along
+        /// <paramref name="to"/>). Both vectors are normalized first; a zero-length input yields
+        /// <see cref="Identity"/>.
+        /// </summary>
+        /// <remarks>
+        /// Maths: the axis is the one perpendicular to both directions — their cross product — and the angle
+        /// is the angle between them, recovered from the dot product (<c>cosθ</c>). Two cases need care:
+        /// when the directions already agree the cross product vanishes (return <see cref="Identity"/>), and
+        /// when they are exactly opposite there is no unique axis, so we pick any axis perpendicular to
+        /// <paramref name="from"/> and turn a half circle about it.
+        /// </remarks>
+        public static Quaternion FromToRotation(Vector from, Vector to)
+        {
+            Vector f = from.NormalizeOrDefault();
+            Vector t = to.NormalizeOrDefault();
+            if (f.IsZero() || t.IsZero()) return Identity;
+
+            double dot = f.DotProduct(t);
+            dot = dot > 1 ? 1 : (dot < -1 ? -1 : dot);
+
+            if (dot >= 1.0 - 1e-12) return Identity; // already aligned
+
+            if (dot <= -1.0 + 1e-12)
+            {
+                // Opposite directions: a half turn about any axis perpendicular to `from`.
+                Vector perp = f.CrossProduct(new Vector(1, 0, 0));
+                if (perp.IsZero()) perp = f.CrossProduct(new Vector(0, 1, 0));
+                return FromAxisAngle(perp.NormalizeOrDefault(), new Angle(Math.PI));
+            }
+
+            Vector axis = f.CrossProduct(t).NormalizeOrDefault();
+            return FromAxisAngle(axis, new Angle(Math.Acos(dot)));
+        }
+
+        /// <summary>
+        /// The orientation that "looks" along <paramref name="forward"/> with <paramref name="up"/> as the
+        /// upward reference, expressed in the given coordinate convention: it maps the convention's
+        /// <see cref="OrthogonalAxes.Forward"/> onto <paramref name="forward"/> and its
+        /// <see cref="OrthogonalAxes.Up"/> as near to <paramref name="up"/> as the forward direction allows.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Maths: a rotation is fixed once you say where it sends two non-parallel reference directions, so
+        /// this is built in two turns — first <see cref="FromToRotation"/> to send the convention's forward
+        /// onto the target forward, then a spin about that new forward to bring the convention's (already
+        /// turned) up as close as possible to <paramref name="up"/>. The third axis (right) then follows
+        /// automatically with the convention's handedness, so no handedness branching is needed.
+        /// </para>
+        /// <para>
+        /// Only the part of <paramref name="up"/> perpendicular to <paramref name="forward"/> can be honoured
+        /// (you cannot be "up" along the very direction you are looking); if <paramref name="up"/> is parallel
+        /// to <paramref name="forward"/> the roll about the forward axis is left unspecified. A zero-length
+        /// <paramref name="forward"/> yields <see cref="Identity"/>. Like <see cref="FromYawPitchRoll"/>,
+        /// this takes an <see cref="OrthogonalAxes"/> so it never assumes a fixed world frame.
+        /// </para>
+        /// </remarks>
+        public static Quaternion LookRotation(Vector forward, Vector up, OrthogonalAxes axes)
+        {
+            Vector f = forward.NormalizeOrDefault();
+            if (f.IsZero()) return Identity;
+
+            // 1. Send the convention's forward onto the target forward.
+            Quaternion toForward = FromToRotation(axes.Forward, f);
+
+            // 2. The part of `up` we can actually reach is the component perpendicular to the forward axis.
+            Vector desiredUp = up - (up.DotProduct(f) * f);
+            if (desiredUp.IsZero()) return toForward; // up parallel to forward: leave the spin free
+            desiredUp = desiredUp.NormalizeOrDefault();
+
+            // Where the convention's up points after step 1 (already perpendicular to f), then the signed
+            // spin about f that brings it onto desiredUp.
+            Vector rotatedUp = toForward.Rotate(axes.Up);
+            double spin = Math.Atan2(
+                rotatedUp.CrossProduct(desiredUp).DotProduct(f),
+                rotatedUp.DotProduct(desiredUp));
+
+            return FromAxisAngle(f, new Angle(spin)) * toForward;
+        }
+
+        /// <summary>
+        /// The orientation that looks along <paramref name="forward"/>, using the convention's own
+        /// <see cref="OrthogonalAxes.Up"/> as the upward reference (see
+        /// <see cref="LookRotation(Vector, Vector, OrthogonalAxes)"/>).
+        /// </summary>
+        public static Quaternion LookRotation(Vector forward, OrthogonalAxes axes)
+        {
+            return LookRotation(forward, axes.Up, axes);
+        }
+
+        /// <summary>
         /// Convert this (assumed unit) quaternion to an equivalent 4x4 homogeneous rotation matrix,
         /// such that <c>q.ToMatrix() * v</c> equals <c>q.Rotate(v)</c>.
         /// </summary>
