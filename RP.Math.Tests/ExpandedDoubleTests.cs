@@ -238,7 +238,7 @@ namespace RP.Math.Tests
             double d = 75.5;
             var result = new ExpandedDouble(d);
 
-            result.Exponent.Should().Be(3, "The exponent of 75.5 should be 3 after removing the bias");
+            result.Exponent.Should().Be(6, "75.5 = 1.0010111 x 2^6, so the unbiased exponent is 6 (stored 1029 minus the IEEE-754 bias of 1023)");
         }
 
         [TestMethod]
@@ -269,7 +269,7 @@ namespace RP.Math.Tests
             double d = 75.5;
             var result = new ExpandedDouble(d);
 
-            result.Mantissa.Should().Be(809240558043137, "The mantissa of 75.5 should be 809240558043137 with the leading one added");
+            result.Mantissa.Should().Be(5312840185413632, "the mantissa of 75.5 is the stored 809240558043136 with the implicit leading one restored at bit 52 (+2^52)");
         }
 
         [TestMethod]

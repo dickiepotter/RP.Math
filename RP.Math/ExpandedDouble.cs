@@ -15,7 +15,7 @@ namespace RP.Math
 
         #region Constants
 
-        public const int ExponentBias = 1026;
+        public const int ExponentBias = 1023;
 
         /// <summary>
         /// The exponent value as stored for Infinite and NaN values
@@ -206,10 +206,11 @@ namespace RP.Math
             {
                 ulong result = this.MantissaAsStored;
 
-                // If the value is normalised then add the implicit leading one
+                // If the value is normalised then restore the implicit leading one. It sits just above
+                // the 52 stored mantissa bits, so it is bit 52 (value 2^52), not a +1 on the low bit.
                 if (this.IsNormalised)
                 {
-                    result += 1; // todo: this may be in reverse so we need to do, mantissa | (1L<<52), test it!
+                    result |= 1UL << 52;
                 }
 
                 return result;

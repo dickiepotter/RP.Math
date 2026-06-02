@@ -1277,6 +1277,74 @@ Two cautions, which is exactly why this is filed under *future* and not *now*:
   themselves, and only then lift the repeated ones into a generic. The rule is that the generics should
   be *extracted from* working pairs, never *imposed on* them.
 
+### A latent bug: `Angle`'s unary minus is not a negation
+
+`Angle`'s unary `-` operator does **not** return the opposite angle — it returns a *coterminal*
+re-expression of the same turn with a negative winding label. For a positive (clockwise) `0.9` it yields
+`0.9 − 2π` (≈ −5.383), which lands on the **same** orientation as `+0.9` (they differ by a full circle),
+not on the inverse `−0.9`. The operator's own doc comment states the intent: "90 degree angle ==> -270
+degree counter-clockwise" — and 90° and −270° are the same rotation.
+
+This matters because it breaks two expectations every *other* unary minus in the library upholds:
+
+- **It is not involutive.** Negating twice does not round-trip: the second call sees an
+  already-counter-clockwise value and returns it unchanged, so `-(-x) ≠ x`.
+- **It disagrees with `Vector` and `Quaternion`,** where unary `-` means "the opposite". Code that
+  builds an inverse rotation as `-angle` therefore gets a silently wrong axis-angle; the correct inverse
+  is `new Angle(-a.Rad)` (negate the raw radians). The `!` operator and `CounterClockwise()` are built on
+  the same operator and inherit the behaviour.
+
+This is a **separate** latent bug from the pinned angle-reduction issue, and is deliberately left
+unfixed for now — recorded here so a future pass can decide whether unary `-` should become a true
+negation (and what that means for the comparison operators that currently lean on the coterminal `+`/`-`
+re-expression).
+
+### A behaviour note: convention-aware `Roll` can differ in sign from the literal-axis `RotateZ`
+
+`Vector.Roll(angle, axes)` banks about the convention's **`Forward`** direction (the *far* axis), whereas
+the literal-axis `RotateZ(rad)` always rotates about **+Z**. These agree only when the convention's
+forward *is* +Z. For a z-**near** frame such as OpenGL — where `Forward` is `(0, 0, −1)` — `Roll(θ)`
+reduces to `RotateZ(−θ)`, the **opposite sign**:
+
+| Frame | `axes.Forward` | `Roll(θ)` equals | vs `RotateZ(θ)` |
+|-------|----------------|------------------|-----------------|
+| DirectX / Unity (z = far) | `(0, 0, +1)` | `RotateZ(θ)` | same sign |
+| OpenGL / Maya / Godot / MathsYUp (z = near) | `(0, 0, −1)` | `RotateZ(−θ)` | **opposite sign** |
+
+This is **not** a regression: it is the principled API being correct and surfacing an assumption the
+old literal-axis code buried — it always banked about +Z even in frames whose forward/depth direction is
+−Z. The convention-aware `Roll` instead banks about the frame's *actual* forward, so it disagrees with
+`RotateZ` exactly in the frames where forward ≠ +Z. The note is here so the sign change reads as
+expected behaviour rather than a surprise: `RotateZ` names a *literal* axis, `Roll` honours a
+*convention*. Both this note and the unary-minus bug above are pinned by tests in
+`MathematicalBugTests` (`Roll_ConventionAware_DiffersInSignFromLegacyFixedAxisRoll_Test` and
+`Angle_UnaryMinus_NumericallyNegates_Test`).
+
+### A latent bug: `Vector.Angle` returns `NaN` for anti-parallel vectors
+
+`Vector.Angle` clamps only the **upper** end of the `Acos` argument — `Math.Acos(Math.Min(1.0f, dot))`
+— and leaves the lower end unguarded. The dot product of two independently-normalised vectors is
+mathematically in `[−1, 1]`, but rounding routinely pushes it a hair outside: `normalize(v) · normalize(v)`
+can be `1.0000000000000002`, so for `v` and `−v` the dot is `−1.0000000000000002` and `Acos(< −1)` is
+`NaN`. The angle between any non-zero vector and its negation is exactly π, never `NaN`.
+
+The fix is a symmetric clamp to `[−1, 1]` before `Acos` (the same `Clamp` helper
+[`PolynomialRoots`](#supporting-numeric-helpers) already uses internally). It is left unfixed for now
+and pinned by `Angle_BetweenAVectorAndItsNegation_IsAlwaysPi_NeverNaN_Test`.
+
+### A latent bug: `Angle.ToAngleValue` reduces to the wrong range and sign
+
+`Angle.ToAngleValue` normalises an out-of-range radian with
+`rad > 2π ? IEEERemainder(rad, 2π) : rad`. `IEEERemainder` returns a value in `[−π, π]`, **not** the
+`[0, 2π)` the type otherwise works in, so reducing `540°` (`3π`) gives `IEEERemainder(3π, 2π) = −π = −180°`
+— even though the method's own doc comment promises "3·PI (540 degree) ==> PI (180 degree)". The guard
+also only fires for `rad > 2π`, leaving large *negative* angles unreduced entirely.
+
+Reconciling this needs a single deliberate decision about the canonical range (`[0, 2π)` vs `(−π, π]`)
+because the comparison operators and the coterminal `+`/`−` re-expression all lean on it — which is why
+it is filed here rather than patched in isolation. Pinned by
+`Angle_ReduceFiveFortyDegrees_GivesOneEighty_PerOwnDocstring_Test`.
+
 ---
 
 ## Status and history

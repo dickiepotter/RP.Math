@@ -39,8 +39,15 @@ namespace RP.Math
                 return new[] { -b / (2.0 * a) };
             }
 
+            // Numerically stable form (Numerical Recipes): the naive (-b ± √disc)/2a subtracts two
+            // nearly-equal numbers for one of the roots when |b| ≫ √disc, destroying precision. Forming
+            // q with the sign of b keeps that subtraction away from cancellation, then the second root
+            // comes from the product relation x₁·x₂ = c/a. q is never zero here because disc > Epsilon.
             double s = Math.Sqrt(disc);
-            return new[] { (-b - s) / (2.0 * a), (-b + s) / (2.0 * a) };
+            double q = -0.5 * (b + (b < 0 ? -s : s));
+            double r1 = q / a;
+            double r2 = c / q;
+            return r1 <= r2 ? new[] { r1, r2 } : new[] { r2, r1 };
         }
 
         /// <summary>The real roots of <c>a·x³ + b·x² + c·x + d = 0</c>.</summary>

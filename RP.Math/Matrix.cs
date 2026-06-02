@@ -332,42 +332,29 @@ namespace RP.Math
 
         public static Matrix operator *(double s1, Matrix m2) { return m2 * s1;  }
 
-        // Matrix multiplication non-commutative
+        // Matrix multiplication, non-commutative. Standard row-by-column product:
+        // (m1 * m2)[r,c] = sum_k m1[r,k] * m2[k,c]. This makes the * operator agree with
+        // Matrix * Vector (M.v), so composing transforms left-to-right then applying them to a
+        // vector evaluates the right-most transform first (e.g. (T * S) * v scales then translates).
         public static Matrix operator *(Matrix m1, Matrix m2)
         {
-            return
-            (
-                new Matrix
-                    (
-                        new double[,] 
-                        {
-                            {
-                                m1[0,0]*m2[0,0] + m1[1,0]*m2[0,1] + m1[2,0]*m2[0,2] + m1[3,0]*m2[0,3],
-                                m1[0,1]*m2[0,0] + m1[1,1]*m2[0,1] + m1[2,1]*m2[0,2] + m1[3,1]*m2[0,3],
-                                m1[0,2]*m2[0,0] + m1[1,2]*m2[0,1] + m1[2,2]*m2[0,2] + m1[3,2]*m2[0,3],
-                                m1[0,3]*m2[0,0] + m1[1,3]*m2[0,1] + m1[2,3]*m2[0,2] + m1[3,3]*m2[0,3]
-                            },
-                            {
-                                m1[0,0]*m2[1,0] + m1[1,0]*m2[1,1] + m1[2,0]*m2[1,2] + m1[3,0]*m2[1,3],
-                                m1[0,1]*m2[1,0] + m1[1,1]*m2[1,1] + m1[2,1]*m2[1,2] + m1[3,1]*m2[1,3],
-                                m1[0,2]*m2[1,0] + m1[1,2]*m2[1,1] + m1[2,2]*m2[1,2] + m1[3,2]*m2[1,3],
-                                m1[0,3]*m2[1,0] + m1[1,3]*m2[1,1] + m1[2,3]*m2[1,2] + m1[3,3]*m2[1,3]
-                            },
-                            {
-                                m1[0,0]*m2[2,0] + m1[1,0]*m2[2,1] + m1[2,0]*m2[2,2] + m1[3,0]*m2[2,3],
-                                m1[0,1]*m2[2,0] + m1[1,1]*m2[2,1] + m1[2,1]*m2[2,2] + m1[3,1]*m2[2,3],
-                                m1[0,2]*m2[2,0] + m1[1,2]*m2[2,1] + m1[2,2]*m2[2,2] + m1[3,2]*m2[2,3],
-                                m1[0,3]*m2[2,0] + m1[1,3]*m2[2,1] + m1[2,3]*m2[2,2] + m1[3,3]*m2[2,3]
-                            },
-                            {
-                                m1[0,0]*m2[3,0] + m1[1,0]*m2[3,1] + m1[2,0]*m2[3,2] + m1[3,0]*m2[3,3],
-                                m1[0,1]*m2[3,0] + m1[1,1]*m2[3,1] + m1[2,1]*m2[3,2] + m1[3,1]*m2[3,3],
-                                m1[0,2]*m2[3,0] + m1[1,2]*m2[3,1] + m1[2,2]*m2[3,2] + m1[3,2]*m2[3,3],
-                                m1[0,3]*m2[3,0] + m1[1,3]*m2[3,1] + m1[2,3]*m2[3,2] + m1[3,3]*m2[3,3]
-                            },
-                        }
-                    )
-            );
+            var result = new double[4, 4];
+
+            for (int r = 0; r < 4; r++)
+            {
+                for (int c = 0; c < 4; c++)
+                {
+                    double sum = 0;
+                    for (int k = 0; k < 4; k++)
+                    {
+                        sum += m1[r, k] * m2[k, c];
+                    }
+
+                    result[r, c] = sum;
+                }
+            }
+
+            return new Matrix(result);
         }
 
         public static Matrix operator /(Matrix m1, double s2)
@@ -808,7 +795,7 @@ namespace RP.Math
         public static Matrix ScalingMatrix(double[] xyz)
         {
             if (xyz.Length != 3) throw new ArgumentOutOfRangeException("xyz", THREE_COMPONENTS);
-            return TranslationMatrix(xyz[0], xyz[1], xyz[2]);
+            return ScalingMatrix(xyz[0], xyz[1], xyz[2]);
         }
 
         public static Matrix ScalingMatrix(double x, double y, double z)
@@ -893,21 +880,22 @@ namespace RP.Math
         {
             get
             {
+                // Identity 3x3 rotation/scale block with a free translation column ([0..2, 3]).
                 return
                 _vals[0, 0] == 1 &&
                 _vals[0, 1] == 0 &&
                 _vals[0, 2] == 0 &&
-                // placeholder
+                // _vals[0, 3] is the x translation — unconstrained
 
                 _vals[1, 0] == 0 &&
                 _vals[1, 1] == 1 &&
                 _vals[1, 2] == 0 &&
-                // placeholder
+                // _vals[1, 3] is the y translation — unconstrained
 
                 _vals[2, 0] == 0 &&
                 _vals[2, 1] == 0 &&
                 _vals[2, 2] == 1 &&
-                // placeholder
+                // _vals[2, 3] is the z translation — unconstrained
 
                 _vals[3, 0] == 0 &&
                 _vals[3, 1] == 0 &&
@@ -918,22 +906,24 @@ namespace RP.Math
 
         public bool IsScalingMatrix
         {
-            get 
+            get
             {
+                // Diagonal scale factors ([0,0], [1,1], [2,2]) are free; everything off the diagonal
+                // must be zero and the homogeneous corner [3,3] must be one.
                 return
-                // placeholder
+                // _vals[0, 0] is the x scale — unconstrained
                 _vals[0, 1] == 0 &&
                 _vals[0, 2] == 0 &&
                 _vals[0, 3] == 0 &&
 
                 _vals[1, 0] == 0 &&
-                // placeholder
+                // _vals[1, 1] is the y scale — unconstrained
                 _vals[1, 2] == 0 &&
                 _vals[1, 3] == 0 &&
 
                 _vals[2, 0] == 0 &&
                 _vals[2, 1] == 0 &&
-                // placeholder
+                // _vals[2, 2] is the z scale — unconstrained
                 _vals[2, 3] == 0 &&
 
                 _vals[3, 0] == 0 &&

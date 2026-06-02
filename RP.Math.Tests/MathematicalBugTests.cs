@@ -13,16 +13,20 @@ namespace RP.Math.Tests
     /// Tests that pin down genuine MATHEMATICAL bugs in the production code.
     ///
     /// Every assertion here states a fact that is provably true by elementary mathematics,
-    /// independent of the implementation. They are EXPECTED TO FAIL against the current code:
-    /// each failure localises a real defect, not a quirk of the test. They are deliberately
-    /// NOT written to rubber-stamp the existing behaviour.
+    /// independent of the implementation. Each one localises a real defect, not a quirk of the test;
+    /// they are deliberately NOT written to rubber-stamp the existing behaviour.
+    ///
+    /// Status: Bugs 2, 3, 5 and 6 are now FIXED — those tests pass and act as regression guards.
+    /// Bugs 1 and 4 remain OPEN by choice and are tracked in the README's "Future considerations";
+    /// their tests are still EXPECTED TO FAIL. Bugs 7 and 8 pin newly-documented behaviour (see each
+    /// test for whether it is a defect or a convention gotcha).
     /// </summary>
     [TestClass]
     public class MathematicalBugTests
     {
         // ------------------------------------------------------------------
-        // BUG 1 — Vector.Angle does not clamp the acos argument to the LOWER
-        // bound, so anti-parallel vectors yield NaN instead of pi.
+        // BUG 1 (open — tracked in README) — Vector.Angle does not clamp the acos argument to the
+        // LOWER bound, so anti-parallel vectors yield NaN instead of pi.
         //
         // Vector.cs:892-894 does  Math.Acos(Math.Min(1.0f, dot)).  The dot of two
         // independently-normalised vectors is mathematically in [-1, 1] but rounding
@@ -53,7 +57,7 @@ namespace RP.Math.Tests
         }
 
         // ------------------------------------------------------------------
-        // BUG 2 — Matrix * Matrix multiplies in the WRONG ORDER.
+        // BUG 2 (fixed) — Matrix * Matrix multiplied in the WRONG ORDER.
         //
         // Matrix.cs:336-371 builds result[r,c] = sum_k m1[k,c]*m2[r,k], which equals
         // (m2 . m1)[r,c] — the reverse of the intended (m1 . m2).  Meanwhile
@@ -85,7 +89,7 @@ namespace RP.Math.Tests
         }
 
         // ------------------------------------------------------------------
-        // BUG 3 — Matrix.ScalingMatrix(double[]) returns a TRANSLATION matrix.
+        // BUG 3 (fixed) — Matrix.ScalingMatrix(double[]) returned a TRANSLATION matrix.
         //
         // Matrix.cs:808-812 delegates to TranslationMatrix(xyz[0], xyz[1], xyz[2]) — a
         // copy-paste error.  The scalar overload ScalingMatrix(x,y,z) is correct; only
@@ -110,7 +114,7 @@ namespace RP.Math.Tests
         }
 
         // ------------------------------------------------------------------
-        // BUG 4 — Angle.ToAngleValue reduces to the wrong range and sign.
+        // BUG 4 (open — tracked in README) — Angle.ToAngleValue reduces to the wrong range and sign.
         //
         // Angle.cs:515-521 uses  rad > 2*pi ? IEEERemainder(rad, 2*pi) : rad.
         // IEEERemainder returns a value in [-pi, pi], NOT [0, 2*pi).  For 540 degrees
@@ -130,7 +134,7 @@ namespace RP.Math.Tests
         }
 
         // ------------------------------------------------------------------
-        // BUG 5 — PolynomialRoots.SolveQuadratic loses precision to catastrophic
+        // BUG 5 (fixed) — PolynomialRoots.SolveQuadratic lost precision to catastrophic
         // cancellation for the root near zero.
         //
         // PolynomialRoots.cs:42-43 uses the naive (-b +/- sqrt(disc)) / (2a).  When b is
@@ -176,6 +180,52 @@ namespace RP.Math.Tests
             Action act = () => axes.ToString();
 
             act.Should().NotThrow();
+        }
+
+        // ------------------------------------------------------------------
+        // BUG 7 (open) — Angle's unary minus does not numerically negate.
+        //
+        // Angle.cs:301-307 defines  -a  as  a.IsClockwise() ? new Angle(-(2*pi - a.Rad)) : a, i.e. it
+        // returns the "counter-clockwise companion" rather than the arithmetic negative. For +90 deg
+        // (pi/2) it yields -270 deg (-3*pi/2) instead of -90 deg, and a + (-a) is not zero. Whatever
+        // the intended clockwise/counter-clockwise semantics, unary minus negating to a DIFFERENT
+        // magnitude is surprising and breaks the identity a + (-a) == 0.
+        // ------------------------------------------------------------------
+        [TestMethod, TestCategory("Bug")]
+        public void Angle_UnaryMinus_NumericallyNegates_Test()
+        {
+            var a = new Angle(Math.PI / 2); // +90 degrees
+
+            var negated = -a;
+
+            // The negative of +90 deg is -90 deg, and the two must cancel.
+            negated.Rad.Should().BeApproximately(-Math.PI / 2, 1e-9);
+            (a + negated).Rad.Should().BeApproximately(0, 1e-9);
+        }
+
+        // ------------------------------------------------------------------
+        // BUG 8 (gotcha — by design, pinned for documentation) — the principled Roll(angle, axes)
+        // can differ in SIGN from the legacy fixed-axis roll for some conventions.
+        //
+        // The legacy API rolls by rotating about +Z (Vector.RotateZ). The convention-aware
+        // Vector.Roll(angle, axes) rotates about axes.Forward. In OpenGL the forward direction is -Z
+        // (z carries NEAR), so the convention-aware roll turns the OPPOSITE way to the legacy roll —
+        // porting RotateZ-based "roll" code to Roll(angle, OpenGL) silently flips the bank direction.
+        //
+        // This test asserts the naive equivalence a porter might assume; it is EXPECTED TO FAIL,
+        // documenting that the equivalence does not hold for forward = -Z frames. (For a +Z-forward
+        // frame such as DirectX/Unity the two agree.)
+        // ------------------------------------------------------------------
+        [TestMethod, TestCategory("Bug")]
+        public void Roll_ConventionAware_DiffersInSignFromLegacyFixedAxisRoll_Test()
+        {
+            var v = new Vector(1, 1, 0);
+            double rad = Math.PI / 3;
+
+            var principled = v.Roll(new Angle(rad), OrthogonalAxes.OpenGL); // about Forward = -Z
+            var legacy = v.RotateZ(rad);                                    // legacy roll about +Z
+
+            principled.Equals(legacy, 1e-9).Should().BeTrue();
         }
     }
 }

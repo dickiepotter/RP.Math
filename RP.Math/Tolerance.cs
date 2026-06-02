@@ -22,7 +22,7 @@
         bool IsWithin(T value, T target);
     }
 
-    namespace RP.Math.Tolerance.Double
+    namespace Double
     {
         using System;
         using System.Collections.Generic;
@@ -41,7 +41,16 @@
 
             public bool IsWithin(double value, double target)
             {
-                throw new NotImplementedException();
+                // Compare the two doubles by how many representable values lie between them. Map each
+                // bit pattern to a monotone ordering first (negative doubles count down from the sign
+                // bit) so the subtraction is meaningful across zero.
+                long a = BitConverter.DoubleToInt64Bits(value);
+                if (a < 0) a = (long)(0x8000000000000000 - (ulong)a);
+
+                long b = BitConverter.DoubleToInt64Bits(target);
+                if (b < 0) b = (long)(0x8000000000000000 - (ulong)b);
+
+                return Math.Abs(a - b) <= this.Ulps;
             }
         }
 
@@ -59,7 +68,9 @@
 
             public bool IsWithin(double value, double target)
             {
-                throw new NotImplementedException();
+                // Percentage is expressed in percent (e.g. 5 == 5%), measured against the target's
+                // magnitude. When the target is zero the band collapses to an exact match.
+                return Math.Abs(value - target) <= Math.Abs(target) * (this.Percentage / 100.0);
             }
         }
 
@@ -77,7 +88,7 @@
 
             public bool IsWithin(double value, double target)
             {
-                throw new NotImplementedException();
+                return Math.Abs(value - target) <= this.Absolute;
             }
         }
 
@@ -95,7 +106,12 @@
 
             public bool IsWithin(double value, double target)
             {
-                throw new NotImplementedException();
+                // Relative error scaled by the larger magnitude of the pair, so the test is symmetric
+                // in value/target. Exact equality (including two zeros) short-circuits to true.
+                if (value == target) return true;
+
+                double scale = Math.Max(Math.Abs(value), Math.Abs(target));
+                return Math.Abs(value - target) <= scale * this.Relative;
             }
         }
 
@@ -116,7 +132,8 @@
 
             public bool IsWithin(double value, double target)
             {
-                throw new NotImplementedException();
+                // An (asymmetric) tolerance band offset from the target: [target + Min, target + Max].
+                return value >= target + this.Min && value <= target + this.Max;
             }
         }
 
@@ -137,7 +154,9 @@
 
             public bool IsWithin(double value, double target)
             {
-                throw new NotImplementedException();
+                // The absolute band rescues the comparison near zero (where ULPs are meaningless),
+                // otherwise the ULPs band applies — matching DoubleExtension.AlmostEqualsWithAbsOrUlps.
+                return this.Absolute.IsWithin(value, target) || this.Ulps.IsWithin(value, target);
             }
         }
 
@@ -158,7 +177,7 @@
 
             public bool IsWithin(double value, double target)
             {
-                throw new NotImplementedException();
+                return this.Absolute.IsWithin(value, target) || this.Relative.IsWithin(value, target);
             }
         }
 
@@ -183,7 +202,7 @@
             /// <param name="x">The first <see cref="double"/> to compare.</param><param name="y">The second <see cref="double"/> to compare.</param>
             public bool Equals(double x, double y)
             {
-                throw new NotImplementedException();
+                return this.Tolerance.IsWithin(x, y);
             }
 
             /// <summary>
@@ -195,7 +214,10 @@
             /// <param name="obj">The <see cref="T:System.Object"/> for which a hash code is to be returned.</param><exception cref="T:System.ArgumentNullException">The type of <paramref name="obj"/> is a reference type and <paramref name="obj"/> is null.</exception>
             public int GetHashCode(double obj)
             {
-                throw new NotImplementedException();
+                // Tolerant equality is not transitive, so no hash can stay consistent with Equals over a
+                // band of values. Returning a constant keeps the contract (equal items hash equal) by
+                // routing every comparison through Equals — correct, at the cost of a single bucket.
+                return 0;
             }
         }
 
@@ -220,7 +242,11 @@
             /// <param name="x">The first object to compare.</param><param name="y">The second object to compare.</param>
             public int Compare(double x, double y)
             {
-                throw new NotImplementedException();
+                // Values that fall within tolerance of each other are treated as equal; otherwise the
+                // natural ordering applies. (Note: like any tolerant comparer this is not transitive,
+                // so it must not be used to sort sequences where that property is relied upon.)
+                if (this.Tolerance.IsWithin(x, y)) return 0;
+                return x < y ? -1 : 1;
             }
         }
     }
