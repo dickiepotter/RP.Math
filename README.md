@@ -30,6 +30,7 @@ more.*
 - [Shapes: conceptual and placed](#shapes-conceptual-and-placed)
 - [Supporting numeric helpers](#supporting-numeric-helpers)
 - [Points of interest](#points-of-interest)
+- [Future considerations](#future-considerations)
 - [Status and history](#status-and-history)
 
 ---
@@ -1157,6 +1158,124 @@ A number of resources informed the original vector article and the maths in this
 - [CSOpenGL](http://sourceforge.net/projects/csopengl/) — Lucas Viñas Livschitz
 - [Exocortex](http://www.exocortex.org/) — Ben Houston
 - *Essential Mathematics for Computer Graphics* — John Vince (ISBN 1-85233-380-4)
+
+---
+
+## Future considerations
+
+A running list of design questions that have been *thought through* but deliberately **not yet
+built** — recorded here so the reasoning is not lost, and so the eventual implementation starts from a
+conclusion rather than from a blank page. The guiding decision in every case below is the same: wait
+until real usage makes the right shape obvious rather than committing to an abstraction early.
+
+### A shared contract for the line family (and possibly the shapes)
+
+The [line family](#the-line-family-line-ray-linesegment-chord) is presented as "one family", but that
+family is currently a *documentation* grouping, not something the type system enforces: `Line`, `Ray`
+and `LineSegment` are unrelated classes (only `Chord` inherits — from `LineSegment`). A natural next
+step is a shared interface so that code can hold "some straight path" without caring which kind it is —
+useful for operations like *snap to the nearest path under the cursor* or *is this click within
+tolerance of any path*, where the per-type clamping should be the path's business, not the caller's.
+
+Two findings from thinking it through are worth preserving.
+
+**1. The anchor point is named differently on purpose, and should stay that way.** The stored point is
+`Line.Point`, `Ray.Origin`, and `LineSegment.Tail` / `Head`. This *looks* inconsistent, but the
+inconsistency is honest: a `Line` is infinite both ways and has **no** start, so its point is merely an
+arbitrary representative; a `Ray` genuinely **begins** at its origin; a `LineSegment` genuinely has
+**two** ends. No single shared name is true for all three — `Origin` / `Start` / `Tail` would falsely
+imply a line begins somewhere, and a bland `Point` everywhere would hide the fact that a ray's anchor is
+its whole defining feature. The conclusion: **do not rename to unify.** A shared interface should expose
+the *behaviour* the family shares (direction and parametric evaluation, below), not the anchor *data*
+they differ on. (If a single neutral name were ever forced, only `Anchor` — "the point at parameter
+zero", which claims nothing about being a start — would be acceptable; but per-type clarity is the
+better trade.)
+
+**2. The obvious interface is too narrow — it actually spans the shapes too.** A first sketch put five
+members on an `IStraightPath`: `Direction`, `PointAt`, closest-point, `DistanceTo` and `Contains`. But
+checking the real surface shows three of those are *not* path-specific at all — every `Placed…` shape
+and `Plane` already implement closest-point and `Contains`. So the honest design is **layered**, not a
+single interface:
+
+- a broad capability — *"a piece of geometry you can ask point-queries of"* — carrying `Contains`,
+  closest-point and `DistanceTo`, implemented by the line family, the placed shapes **and** `Plane`;
+- a narrow straight-path specialization on top, adding the genuinely one-dimensional members
+  `Direction` and `PointAt`, implemented by the line family alone.
+
+### Inconsistencies to reconcile first
+
+Whatever shape the interfaces eventually take, they cannot be written until a few naming and coverage
+gaps — surfaced while exploring the above — are settled. Each is worth fixing in its own right,
+independently of any interface:
+
+- **Closest-point has two names for one operation:** `ClosestPointTo(point)` on the line family versus
+  `ClosestPoint(point)` on every shape and on `Plane`. One name must win before either can share a
+  contract.
+- **`Contains` coverage is uneven:** it exists on `Line` but not on `Ray` or `LineSegment`, while every
+  shape carries both a `Contains(point)` and a `Contains(point, tolerance)` overload.
+- **`DistanceTo` is missing on the shapes:** the line family and `Plane` have it; the placed shapes do
+  not, although it is a one-liner over their existing closest-point
+  (`(point − ClosestPoint(point)).Magnitude`).
+- **An open question of *meaning*:** `Contains` on a filled shape means "on or within"; on a
+  zero-thickness line / ray / segment it can only mean "lies on". The signature and intent match, but
+  whether that is genuinely *the same concept* — and therefore safe to place on one shared interface —
+  is exactly the kind of false-implication risk this library tries hard to avoid, and should be settled
+  deliberately rather than by accident.
+- **Intersection is a separate, related capability:** shapes accept a `Line` / `Ray` and report hits,
+  but their out-parameters already disagree (`out Vector point` for some, `out Vector near, out Vector
+  far` for others). This is where the two families *relate* rather than *share*, and it carries its own
+  consistency question for a later pass.
+
+### Generic positioning, keyed on symmetry
+
+Today every shape has a hand-written `Placed…` partner, and each placed shape stores a full
+[`Pose`](#pose) regardless of how much of that pose the shape's symmetry actually uses. But the
+[placement-and-symmetry table](#placement-and-symmetry) already shows that the *amount of placement a
+shape needs* falls into only a few distinct kinds — and that, in turn, decides whether a shape really
+needs a whole pose or merely a vector:
+
+- **A point only — a bare `Vector`.** A fully symmetric shape (`Sphere`) needs just a centre;
+  orientation is meaningless, so a `PlacedSphere` handed an orientation simply ignores it.
+- **A point and an axis — a `Vector` centre plus one direction.** An axially-symmetric shape (`Circle`,
+  `Cylinder`, `Cone`, `Capsule`, `Annulus`, `Torus`) needs a centre and a single axis; spin about that
+  axis is irrelevant, so the roll part of a pose is wasted.
+- **A full `Pose`.** Only an asymmetric shape (`Rectangle`, `Cuboid`, `Ellipse`, `Ellipsoid`, `Sector`)
+  genuinely needs a complete orientation.
+- **Corners.** Vertex-defined shapes (`PlacedTriangle`, `PlacedPolygon`, `PlacedTetrahedron`) carry
+  their placement implicitly in their points and need no separate positioning value at all.
+
+That clustering is a strong hint that the placement layer could be expressed with **a small number of
+generics keyed on the placement kind**, rather than one bespoke class per shape — so that each placed
+type carries *exactly the placement data its symmetry justifies*. A couple of sketches, to be refined
+later:
+
+```csharp
+// Fully symmetric: positioned by a single point.
+public readonly struct PointPlaced<TShape> { TShape Shape; Vector Centre; /* … */ }
+
+// Axially symmetric: positioned by a centre and one axis direction (spin about it is irrelevant).
+public readonly struct AxialPlaced<TShape> { TShape Shape; Vector Centre; Vector Axis; /* … */ }
+
+// No symmetry to spare: positioned by a full pose.
+public readonly struct PosePlaced<TShape> { TShape Shape; Pose Pose; /* … */ }
+```
+
+Done well, this would make a meaningless placement impossible to construct — a `Sphere` could no longer
+be given an orientation it ignores — in the same spirit that [`OrthogonalAxes`](#orthogonalaxes) made a
+meaningless coordinate frame impossible to build.
+
+Two cautions, which is exactly why this is filed under *future* and not *now*:
+
+- **It reopens a decision already taken.** The shapes section deliberately chose
+  [paired concrete types over a generic wrapper](#decisions-captured-here), and an earlier blanket
+  `IShape` / `Placed<T>` was removed because the world-space maths differs too much shape to shape to
+  hide behind one interface. The proposal here is narrower — generics keyed on *placement kind*, not one
+  wrapper over everything — but it still revisits that ground and must earn its place.
+- **It only pays off once the pairs are right.** The conceptual/placed pairs are still settling, and
+  abstracting over them now risks freezing an interface before the per-shape maths has proven its shape.
+  **Get the hand-written pairs correct first**, let the genuinely-common positioning operations reveal
+  themselves, and only then lift the repeated ones into a generic. The rule is that the generics should
+  be *extracted from* working pairs, never *imposed on* them.
 
 ---
 
